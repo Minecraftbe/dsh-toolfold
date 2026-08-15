@@ -1,0 +1,23 @@
+# dsh-toolfold bundle patch — the `dsh.bundle.patch` layer of the npm package.
+#
+# Installing through the official plugin CLI —
+#
+#   dsh plugin --profile web add dsh-toolfold
+#   (or, from this checkout:  npm run install:dsh)
+#
+# — reconciles `dsh.profile.bundles` against the installed package and, seeing
+# this declaration, appends `dsh-toolfold` to the bundle stack. The profile
+# boot then merges THIS patch (one `insert` of the plugin row) exactly like a
+# manual cordis.patch.yml mount line used to. One command installs AND mounts;
+# no profile file edits needed.
+#
+# The browser half needs no row of its own: the web client loader scans
+# installed bundles for the package's `dsh.client.platform: "web"` manifest
+# and serves `exports["./client"]` to the page.
+#
+# If the profile still carries a manual `toolfold` row from an earlier manual
+# install, remove it before switching to the bundle channel to avoid
+# double-mounting (two host halves, two API routes).
+- insert:
+    - id: toolfold
+      name: 'dsh-toolfold'

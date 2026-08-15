@@ -1,0 +1,43 @@
+{
+  "name": "dsh-toolfold",
+  "version": "0.1.0",
+  "description": "工具调用与思考的折叠显示：连续工具调用折叠为最后一个调用（可展开），已完成的思考随组折叠（可保留、展开时按原顺序显示），进行中的思考保持独立显示。",
+  "type": "module",
+  "main": "lib/index.js",
+  "exports": {
+    ".": {
+      "default": "./lib/index.js"
+    },
+    "./client": {
+      "default": "./lib/client.js"
+    },
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": []
+    }
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "scripts",
+    "README.md",
+    "README.en.md"
+  ],
+  "scripts": {
+    "test:engine": "node tools/engine-smoke.mjs",
+    "probe:live": "node tools/live-probe.mjs",
+    "install:dsh": "node scripts/install-dsh.cjs",
+    "uninstall:dsh": "node scripts/install-dsh.cjs uninstall"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-settings": "0.1.0-rc.6",
+    "schemastery": "^3.18.0"
+  },
+  "license": "MIT"
+}
