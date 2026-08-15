@@ -35,8 +35,8 @@
     "install:dsh": "node scripts/install-dsh.cjs",
     "uninstall:dsh": "node scripts/install-dsh.cjs uninstall"
   },
-  "dependencies": {
-    "@deepseek-ai/dsh-settings": "0.1.0-rc.6",
+  "peerDependencies": {
+    "@deepseek-ai/dsh-settings": "^0.1.0-rc.6",
     "schemastery": "^3.18.0"
   },
   "license": "MIT"
