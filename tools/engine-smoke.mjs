@@ -3,12 +3,14 @@
  * engine, running the REAL lib/client.js source against jsdom.
  *
  * What it verifies:
- *   1. a run of 3 tool calls folds into one bar (rows hidden, bar in place);
- *   2. streaming text mutations are ignored with ZERO passes (skip counter);
- *   3. tool-content mutations only refresh the affected bar clone;
- *   4. expand / collapse round-trip;
- *   5. row-level churn drives merge passes;
- *   6. dispose restores the DOM and leaves no live observers.
+ *   1. a run of tool calls folds into a bar, and settled thinking SPLITS
+ *      one call sequence into independent bars (rows hidden, bars in place);
+ *   2. keepThink toggling keeps the think row visible between the bars;
+ *   3. streaming text mutations are ignored with ZERO passes (skip counter);
+ *   4. tool-content mutations only refresh the affected bar clone;
+ *   5. expand / collapse round-trip;
+ *   6. row-level churn drives merge passes;
+ *   7. dispose restores the DOM and leaves no live observers.
  *
  * It also prints measured engine cost per mutation class (via the opt-in
  * stats counters), i.e. hard numbers for the "near-zero performance cost"
@@ -65,19 +67,20 @@ document.body.appendChild(flow);
 
 const t1 = makeRow('tool-call', 'k1');
 const t2 = makeRow('tool-call', 'k2');
-const t3 = makeRow('tool-call', 'k3');
 const thinkRow = makeRow('assistant-step', 'k-think');
 const think = document.createElement('div');
 think.setAttribute('data-variant', 'think');
 think.setAttribute('data-state', 'ok');
 thinkRow.appendChild(think);
-for (const [t, name] of [[t1, 'read'], [t2, 'write'], [t3, 'bash']]) {
+const t3 = makeRow('tool-call', 'k3');
+const t4 = makeRow('tool-call', 'k4');
+for (const [t, name] of [[t1, 'read'], [t2, 'write'], [t3, 'bash'], [t4, 'grep']]) {
   const disc = document.createElement('div');
   disc.setAttribute('data-disclosure-row', '');
   disc.textContent = name + ' \u2014 initial';
   t.appendChild(disc);
 }
-flow.append(t1, t2, thinkRow, t3);
+flow.append(t1, t2, thinkRow, t3, t4);
 
 // ---- Module loader shim + boot the plugin. ----
 let plugin = null;
@@ -114,12 +117,16 @@ const store = window.__toolfoldSettings;
 check('settings store exposed', store !== undefined && typeof store.update === 'function');
 
 // ---- 1. Initial folding. ----
-const bar = flow.querySelector('.ccxBar');
-check('run of 3 folds into one bar', bar !== null);
-check('bar sits before the first row', bar !== null && bar.nextElementSibling === t1);
-check('tool rows hidden when collapsed',
-  [t1, t2, t3].every((t) => t.classList.contains('ccxMerged')));
-check('settled think row between calls also folds', thinkRow.classList.contains('ccxMerged'));
+const bars = flow.querySelectorAll('.ccxBar');
+let bar = bars[0];
+let bar2 = bars[1];
+check('settled think separates the calls into two runs', bars.length === 2, 'bars=' + bars.length);
+check('bar1 sits before the first row', bar !== null && bar.nextElementSibling === t1);
+check('bar2 sits after the think row', bar2 !== null && bar2.nextElementSibling === t3);
+check('first block rows hidden when collapsed', [t1, t2].every((t) => t.classList.contains('ccxMerged')));
+check('second block rows hidden when collapsed', [t3, t4].every((t) => t.classList.contains('ccxMerged')));
+check('think row is NOT merged into any bar', !thinkRow.classList.contains('ccxMerged'));
+check('think row hidden as empty step (keepThink off)', thinkRow.classList.contains('ccxEmpty'));
 
 // ---- 1b. DSH settings bridge (official scope → host route → localStorage). ----
 const bridge = window.__toolfoldBridge;
@@ -134,11 +141,11 @@ window.fetch = (url, init) => {
   const method = init === undefined ? 'GET' : init.method;
   if (method === 'GET') {
     return Promise.resolve({ ok: true, json: () => Promise.resolve({
-      ok: true, value: { value: { durMs: 500, keepThink: true, stats: false }, revision: 3, writable: true },
+      ok: true, value: { value: { durMs: 500, keepThink: true, splitThink: true, stats: false }, revision: 3, writable: true },
     }) });
   }
   const body = JSON.parse(init.body);
-  const value = { durMs: body.op === 'set' && body.field === 'durMs' ? body.value : 500, keepThink: true, stats: false };
+  const value = { durMs: body.op === 'set' && body.field === 'durMs' ? body.value : 500, keepThink: true, splitThink: true, stats: false };
   return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, value: { value, revision: 4, writable: true } }) });
 };
 await bridge.load();
@@ -154,6 +161,42 @@ check('optimistic local update applied immediately', store.getSnapshot().durMs =
 check('host write response adopted', store.getSnapshot().durMs === 700 && store.getSnapshot().keepThink === true);
 // Restore defaults so the timing-sensitive collapse checks below stay valid.
 store.update({ durMs: 240, keepThink: false });
+
+// ---- 1c. keepThink on → think row stays visible between the two bars. ----
+store.update({ keepThink: true });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('keepThink on keeps think row visible between bars',
+  !thinkRow.classList.contains('ccxEmpty') && !thinkRow.classList.contains('ccxMerged'));
+check('bars still split around the visible think', flow.querySelectorAll('.ccxBar').length === 2);
+store.update({ keepThink: false });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('keepThink off hides the think row again', thinkRow.classList.contains('ccxEmpty'));
+
+// ---- 1d. splitThink off → the original merge: one bar across the think. ----
+store.update({ splitThink: false });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('merge mode folds the whole sequence into one bar',
+  flow.querySelectorAll('.ccxBar').length === 1);
+check('all four calls hidden under the merged bar',
+  [t1, t2, t3, t4].every((t) => t.classList.contains('ccxMerged')));
+check('think row folds WITH the merged run', thinkRow.classList.contains('ccxMerged'));
+store.update({ splitThink: true });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('split mode restored: two bars again', flow.querySelectorAll('.ccxBar').length === 2);
+check('think row no longer merged after split restored', !thinkRow.classList.contains('ccxMerged'));
+// The 1d toggle rebuilt bar2 (merge mode removed it), so re-query before
+// the later sections rely on the bar references.
+const barsNow = flow.querySelectorAll('.ccxBar');
+bar = barsNow[0];
+bar2 = barsNow[1];
 
 // ---- 2. Streaming must be ignored (zero-cost path). ----
 store.update({ stats: true });
@@ -207,7 +250,8 @@ console.log('  \u2139 engine overhead above floor: ' + aOverhead.toFixed(2)
   + ' ms (' + ((aOverhead / 20000) * 1000).toFixed(3) + ' \u00b5s/node; real browsers pay ~10-30x less)');
 check('streaming classification overhead bounded (<100ms even under jsdom)',
   aOverhead < 100, aOverhead.toFixed(2) + ' ms');
-check('rows stay folded after streaming', [t1, t2, t3].every((t) => t.classList.contains('ccxMerged')));
+check('rows stay folded after streaming',
+  [t1, t2, t3, t4].every((t) => t.classList.contains('ccxMerged')));
 
 // Worst case: one giant synchronous batch (React big-commit analogue).
 const obsW = store.stats.obsMs;
@@ -227,7 +271,7 @@ for (let b = 0; b < 50; b++) {
   for (let i = 0; i < 10; i++) {
     const el = document.createElement('span');
     el.textContent = 'out' + b + '-' + i;
-    t3.querySelector('[data-disclosure-row]').appendChild(el);
+    t4.querySelector('[data-disclosure-row]').appendChild(el);
   }
   await nextTick();
 }
@@ -238,16 +282,20 @@ check('bar clone refreshed from last call', s2.clone > clone0, 'clone delta=' + 
 check('content went through refresh, not merge passes',
   s2.refresh > refresh1 && s2.pass === pass0,
   'refresh delta=' + (s2.refresh - refresh1) + ', pass delta=' + (s2.pass - pass0));
-check('bar shows last call content', bar.textContent.indexOf('out') !== -1);
+check('bar2 shows last call content', bar2.textContent.indexOf('out') !== -1);
 
-// ---- 4. Expand / collapse round-trip. ----
+// ---- 4. Expand / collapse round-trip (bar1 covers t1+t2 only). ----
 bar.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 await sleep(80);
-check('expand removes ccxMerged', [t1, t2, t3].every((t) => !t.classList.contains('ccxMerged')));
+check('expand removes ccxMerged from the first block only',
+  [t1, t2].every((t) => !t.classList.contains('ccxMerged'))
+  && [t3, t4].every((t) => t.classList.contains('ccxMerged')));
 check('bar shows expanded label', bar.textContent.indexOf('\u5df2\u5c55\u5f00') !== -1);
 bar.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
-await sleep(700); // collapse duration (4 rows * 45ms + 240ms) + cleanup timer
-check('collapse re-applies ccxMerged', [t1, t2, t3].every((t) => t.classList.contains('ccxMerged')));
+await sleep(700); // collapse duration (2 rows * 45ms + 240ms) + cleanup timer
+check('collapse re-applies ccxMerged to the first block', [t1, t2].every((t) => t.classList.contains('ccxMerged')));
+// The second bar still folds its own block.
+check('second block still folded after first-block round-trip', [t3, t4].every((t) => t.classList.contains('ccxMerged')));
 
 // ---- 5. Row-level churn drives merge passes. ----
 const pass1 = store.stats.pass;
@@ -263,7 +311,7 @@ check('row adds ran merge passes', store.stats.pass > pass1, 'pass delta=' + (st
 disposers[0]();
 check('bars removed on dispose', flow.querySelector('.ccxBar') === null);
 check('classes removed on dispose',
-  [t1, t2, t3, thinkRow].every((t) => !t.classList.contains('ccxMerged')));
+  [t1, t2, t3, t4, thinkRow].every((t) => !t.classList.contains('ccxMerged')));
 check('style tag removed on dispose', document.querySelector('style[data-plugin-css]') === null);
 think.appendChild(document.createTextNode('after dispose'));
 await sleep(20);

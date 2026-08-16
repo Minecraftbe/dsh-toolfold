@@ -1,23 +1,26 @@
 # dsh-toolfold · Tool Call Folding
 
 > A DSH Web GUI plugin delivering a **Codex-like folding experience**: runs of consecutive
-> **tool calls** and **settled thinking** fold into a single compact bar showing a one-line
-> summary of the **last call** — click to expand/collapse. It replaces no built-in renderer, and
-> uninstalling restores the UI completely.
+> **tool calls** fold into a single compact bar showing a one-line summary of the **last call** —
+> click to expand/collapse. It replaces no built-in renderer, and uninstalling restores the UI
+> completely.
 
 ![Folding demo](assets/demo-fold.gif)
 <!-- 🖼️ IMAGE SLOT: assets/demo-fold.gif — record 6–10s: a run of tool calls auto-folds into one bar → click to expand (cards waterfall down) → click to collapse (cards rise, heights shrink), 16:9, ≤2MB -->
 
 ## Highlights
 
-- **Runs of tool calls fold into one bar**: consecutive tool calls (a run may include settled
-  thinking between calls) collapse into a single bar showing the **last call's** one-line summary,
-  labelled "已折叠 N 个工具调用 · 点击展开" (N folded calls · click to expand);
-- **Thinking folds with the run**: settled think blocks never split a run — hidden by default, or
-  (with "保留思考" enabled) hidden while collapsed and **re-inserted in their original order**
-  between the calls on expand. Nothing disappears;
+- **Runs of tool calls fold into one bar**: consecutive tool calls collapse into a single bar
+  showing the **last call's** one-line summary, labelled "已折叠 N 个工具调用 · 点击展开"
+  (N folded calls · click to expand);
+- **Thinking separates call groups (default on)**: settled think blocks SPLIT the calls around
+  them into independent bars — calls before and after a completed think never merge into one bar;
+  turn it off to restore the original fold, where thinking folds WITH the surrounding tool group;
+- **Thinking hidden by default, keepable**: settled think blocks are hidden outright by default;
+  with "保留思考" enabled they never disappear — shown between the folded bars in split mode, or
+  **re-inserted in their original order** between the calls on expand in merge mode;
 - **In-progress thinking stays visible**: streaming think blocks render as their own row until
-  they complete, then fold into the group automatically;
+  they complete, then follow the "split thinking" setting;
 - **Spring waterfall animations**: cards cascade down on expand (spring overshoot) and rise with a
   synchronized height shrink on collapse — content below follows continuously, no end snap;
   disabled automatically under `prefers-reduced-motion`;
@@ -74,7 +77,8 @@ the light/dark theme).
 | Setting | Description |
 | --- | --- |
 | **展开动画时长** (expand duration) | Per-card duration of the expand/collapse waterfall, 0–1000ms, default 240ms; 0 = instant |
-| **保留思考** (keep thinking) | On: settled thinking folds with the run and reappears in its original order between the calls on expand; Off: thinking is hidden outright |
+| **保留思考** (keep thinking) | Settled thinking is hidden by default; on: it never disappears — shown between the folded bars in split mode, or re-inserted in its original order between the calls on expand in merge mode |
+| **思考分隔调用组** (split call groups) | On (default): settled thinking splits the calls around it into independent bars; Off: thinking folds with the surrounding tool group (legacy behavior) |
 | **性能统计** (performance stats) | Shows the plugin's own live cost in the card (cumulative counts and ms/s for observer callbacks / engine refreshes / merge passes / safety rescans / summary clones, plus the streaming batches ignored by the zero-cost short-circuit) |
 
 Interactions: click the bar to expand/collapse; `Enter` or `Space` works too.
@@ -89,7 +93,8 @@ Interactions: click the bar to expand/collapse; `Enter` or `Space` works too.
   ```yaml
   toolfold:
     durMs: 240        # expand animation duration, 0–2000ms
-    keepThink: false  # fold settled thinking with the run
+    keepThink: false  # keep settled thinking visible (between bars / on expand)
+    splitThink: true  # settled thinking splits call groups into independent bars (default true)
     stats: false      # performance meter
   ```
 
@@ -116,8 +121,9 @@ Interactions: click the bar to expand/collapse; `Enter` or `Space` works too.
 
 - Folding works on the rendered DOM and depends on stable product markers; if the product markup
   changes, the worst case is that folding stops applying — the chat itself is never harmed;
-- **In-progress thinking** and **AI text output** separate runs (in-progress thinking folds into the
-  group once it completes);
+- **In-progress thinking** and **AI text output** separate runs; **settled thinking** also
+  separates runs by default ("思考分隔调用组" on) — with it off, settled thinking folds with the
+  surrounding tool group instead;
 - Expanded state is remembered per session flow + node key; reopening a session with the same keys
   restores it;
 - Settings are owned by the DSH host config (`~/.dsh/settings.yaml`); browser `localStorage` is
