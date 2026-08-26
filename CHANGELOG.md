@@ -2,6 +2,14 @@
 
 所有显著变更将记录于此。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.7] - 2026-08-26
+
+### Fixed
+- npm 发布命令增加 `--no-git-checks`，跳过 pnpm 的 git 状态检查，避免在 CI 检出态下发布失败。
+
+### Changed
+- 将发布工作流 Node 版本由 `lts/*` 固定为 `24`，与当前构建环境对齐。
+
 ## [0.1.6] - 2026-08-26
 
 ### Fixed
@@ -46,6 +54,7 @@
 - 首个可用版本：连续 `tool-call` 折叠为最后一条的单行摘要 + “已折叠 N 个工具调用”，支持 `durMs / keepThink / splitThink / stats` 四项设置（DSH `settings` 服务 → `~/.dsh/settings.yaml`，回退到 Host 路由与 `localStorage`）与瀑布动画。
 - `toolfold` 远端包与一键安装、设置双半通信（Host `GET/POST /api/dsh-toolfold/settings` + Client 桥）。
 
+[0.1.7]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.4...v0.1.5
 [0.1.4]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.3...v0.1.4
