@@ -1,6 +1,6 @@
 {
   "name": "dsh-toolfold",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "工具调用与思考的折叠显示：连续工具调用折叠为最后一个调用（可展开），已完成的思考随组折叠（可保留、展开时按原顺序显示），进行中的思考保持独立显示。",
   "type": "module",
   "main": "lib/index.js",
@@ -27,7 +27,8 @@
     "cordis.patch.yml",
     "scripts",
     "README.md",
-    "README.en.md"
+    "README.en.md",
+    "CHANGELOG.md"
   ],
   "scripts": {
     "test:engine": "node tools/engine-smoke.mjs",
