@@ -1,5 +1,7 @@
 name: Publish Package
-
+# NOTE:
+# npm Trusted Publisher repository matching is case-sensitive.
+# Keep owner casing exactly as GitHub OIDC repository claim.
 on:
   release:
     types: [published]
