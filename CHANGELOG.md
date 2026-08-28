@@ -2,6 +2,16 @@
 
 所有显著变更将记录于此。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.1.8] - 2026-08-28
+
+### Fixed
+- 修复运行时收起"先动一下再突然收起"：当模型产生大量工具调用、且它们是最新信息时，run 在收起动画期间仍在增长。旧实现（自 0.1.3 起）假定行集合固定：折叠条点击闭包持有的是创建时的旧 run 快照，动画只覆盖原始行，随后按旧行数计时的完成定时器把整个增长后的 run 一次性合并，新流入的行瞬间消失。现点击改为操作当前 run（`bar._ccxRun`）而非创建时快照；`syncBars` 将动画期间新增的行折入同一瀑布（`extendCollapse`：rise 类 + 高度收缩 + 各自 stagger）并重排完成定时器（`armCollapseFinish`），最后一行动画结束才应用合并。（`lib/client.js`, `lib/dynamic-body.js`）
+
+### Changed
+- npm 发布工作流增加 OIDC 权限（`id-token: write`、`contents: read`），发布改用 OIDC 身份认证（移除 `NODE_AUTH_TOKEN` 环境变量），并禁用 `package-manager-cache`。
+- `package.json` 增加 `repository` 字段指向 GitHub 仓库。
+- 重构 README：重组章节（安装、快速开始、默认行为、功能、设置、性能、限制），新增"默认行为 – 首次使用"说明（为什么思考会消失、为什么调用默认分组，以及快速修复指引），补充安装方法与徽章，并同步翻译为 `README.en.md`。
+
 ## [0.1.7] - 2026-08-26
 
 ### Fixed
@@ -54,6 +64,7 @@
 - 首个可用版本：连续 `tool-call` 折叠为最后一条的单行摘要 + “已折叠 N 个工具调用”，支持 `durMs / keepThink / splitThink / stats` 四项设置（DSH `settings` 服务 → `~/.dsh/settings.yaml`，回退到 Host 路由与 `localStorage`）与瀑布动画。
 - `toolfold` 远端包与一键安装、设置双半通信（Host `GET/POST /api/dsh-toolfold/settings` + Client 桥）。
 
+[0.1.8]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.5...v0.1.6
 [0.1.5]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.4...v0.1.5
