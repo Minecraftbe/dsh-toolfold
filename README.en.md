@@ -2,138 +2,173 @@
 
 [![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
 
-[中文](README.md) | English
+English | [中文](README.md)
 
-> A DSH Web GUI plugin delivering a **Codex-like folding experience**: runs of consecutive
-> **tool calls** fold into a single compact bar showing a one-line summary of the **last call** —
-> click to expand/collapse. It replaces no built-in renderer, and uninstalling restores the UI
-> completely.
+> A DSH Web GUI plugin that provides a **Codex‑like tool folding experience**: consecutive **tool calls** are collapsed into a single compact bar showing only a one‑line summary of the last call. Click to expand/collapse.  
+> It does not replace any built‑in renderer, and uninstallation restores the UI completely.
 
-![Folding demo](assets/demo-fold.gif)
-<!-- 🖼️ IMAGE SLOT: assets/demo-fold.gif — record 6–10s: a run of tool calls auto-folds into one bar → click to expand (cards waterfall down) → click to collapse (cards rise, heights shrink), 16:9, ≤2MB -->
+![Demo folding effect](assets/demo-fold.gif)
 
-## Highlights
+---
 
-- **Runs of tool calls fold into one bar**: consecutive tool calls collapse into a single bar
-  showing the **last call's** one-line summary, labelled "已折叠 N 个工具调用 · 点击展开"
-  (N folded calls · click to expand);
-- **Thinking separates call groups (default on)**: settled think blocks SPLIT the calls around
-  them into independent bars — calls before and after a completed think never merge into one bar;
-  turn it off to restore the original fold, where thinking folds WITH the surrounding tool group;
-- **Thinking hidden by default, keepable**: settled think blocks are hidden outright by default;
-  with "保留思考" enabled they never disappear — shown between the folded bars in split mode, or
-  **re-inserted in their original order** between the calls on expand in merge mode;
-- **In-progress thinking stays visible**: streaming think blocks render as their own row until
-  they complete, then follow the "split thinking" setting;
-- **Spring waterfall animations**: cards cascade down on expand (spring overshoot) and rise with a
-  synchronized height shrink on collapse — content below follows continuously, no end snap;
-  disabled automatically under `prefers-reduced-motion`;
-- **Bottom-pinned expand**: expanding near the bottom pins the bar's viewport position, so the
-  chat's auto-scroll never shoves it off the top of the screen;
-- **Near-zero performance cost**: no page-wide observer, zero work while content streams, and
-  everything pauses when the tab is hidden — measured ≈0.03% of one core while idle
-  (see [Performance](#performance)).
+## Table of Contents
 
-![Expand / collapse animation](assets/expand-collapse.gif)
-<!-- 🖼️ IMAGE SLOT: assets/expand-collapse.gif — close-up of one 3–4 call run expanding (waterfall + label slide) and collapsing (rise + height shrink), square or 4:3, ≤2MB -->
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Default Behaviour – First Use](#default-behaviour--first-use)
+- [Features](#features)
+- [Settings](#settings)
+  - [Options](#options)
+  - [Storage Location](#storage-location)
+- [Performance](#performance)
+- [Limitations & Compatibility](#limitations--compatibility)
+
+---
 
 ## Installation
 
-### Install from npm (recommended)
+### Recommended (via npm)
+
 ```sh
 dsh plugin --profile web add dsh-toolfold
 ```
 
-### Alternative installation methods
+### Alternative Methods
 
 ```sh
-# Install from GitHub
+# From GitHub
 dsh plugin --profile web add github:Minecraftbe/dsh-toolfold
 
-# Or install from source
+# From source
 git clone https://github.com/Minecraftbe/dsh-toolfold.git
 dsh plugin --profile web add ./dsh-toolfold
 ```
 
-After installation, **restart dsh and refresh your browser** for the changes to take effect (the bundle layer is composed at startup). You can verify that the final configuration is active with the following command:
+After installation, **restart dsh and refresh your browser** – the plugin will be active. You can verify that it is included in the final bundle with:
 
 ```sh
 dsh --profile web --dump-config
 ```
 
-### Uninstall
+### Uninstallation
 
 ```sh
 dsh plugin --profile web remove dsh-toolfold
 ```
 
-After a restart the UI is completely restored.
-
-## Usage & Settings
-
-Settings: **Settings → Plugins → 工具折叠** (the card matches the built-in plugin cards and follows
-the light/dark theme).
-
-![Settings card](assets/settings.png)
-<!-- 🖼️ IMAGE SLOT: assets/settings.png — screenshot of the expanded "工具折叠" card in Settings → Plugins (duration slider + keep-think toggle + stats toggle + storage-location hint), light theme, PNG/WebP ≤1MB -->
-
-| Setting | Description |
-| --- | --- |
-| **展开动画时长** (expand duration) | Per-card duration of the expand/collapse waterfall, 0–1000ms, default 240ms; 0 = instant |
-| **保留思考** (keep thinking) | Settled thinking is hidden by default; on: it never disappears — shown between the folded bars in split mode, or re-inserted in its original order between the calls on expand in merge mode |
-| **思考分隔调用组** (split call groups) | On (default): settled thinking splits the calls around it into independent bars; Off: thinking folds with the surrounding tool group (legacy behavior) |
-| **性能统计** (performance stats) | Shows the plugin's own live cost in the card (cumulative counts and ms/s for observer callbacks / engine refreshes / merge passes / safety rescans / summary clones, plus the streaming batches ignored by the zero-cost short-circuit) |
-
-Interactions: click the bar to expand/collapse; `Enter` or `Space` works too.
-
-### Where settings live
-
-- **Installed (bundle) mode**: the DSH **settings service** persists them to
-  `~/.dsh/settings.yaml` (namespace `toolfold`) — the same document the product and other
-  plugins use, host-side, so they survive browser/device changes. The card footer shows
-  "设置保存在 DSH 主机配置". The file is editable directly:
-
-  ```yaml
-  toolfold:
-    durMs: 240        # expand animation duration, 0–2000ms
-    keepThink: false  # keep settled thinking visible (between bars / on expand)
-    splitThink: true  # settled thinking splits call groups into independent bars (default true)
-    stats: false      # performance meter
-  ```
-
-- **When no DSH settings service is detected** (remote browsers and other setups without the DSH
-  settings bridge): degrades to browser `localStorage` (key `dsh-toolfold.settings.v1`) and the
-  card says "仅保存在本浏览器"; the legacy key `dsh-codex-collapse.settings.v1` migrates
-  automatically on first load.
-
-![Keep-thinking comparison](assets/keep-think.gif)
-<!-- 🖼️ IMAGE SLOT: assets/keep-think.gif — same run expanded twice, "keep thinking" off vs on, showing the think block hidden vs re-inserted in order, ≤2MB -->
-
-## Performance
-
-- **Measured on the live GUI (8s idle window)**: engine total ≈1.6–2.8ms (≈0.3ms/s, ≈0.03% of one
-  core); a 5s CPU sample in the same window shows **zero samples from the engine** — the page's long
-  tasks (141–686ms) come from page load, product rendering, and other plugins;
-- **Zero work while streaming**: text/think token mutations are short-circuited in O(1) and never
-  trigger a recompute (≈0.1–0.4µs per node);
-- **Hidden tab = literally zero**: all observers and timers disconnect on hide and re-attach with a
-  reconciliation pass on return;
-- Turn on "性能统计" to watch every cost item live inside the settings card.
-
-## Notes & Limitations
-
-- Folding works on the rendered DOM and depends on stable product markers; if the product markup
-  changes, the worst case is that folding stops applying — the chat itself is never harmed;
-- **In-progress thinking** and **AI text output** separate runs; **settled thinking** also
-  separates runs by default ("思考分隔调用组" on) — with it off, settled thinking folds with the
-  surrounding tool group instead;
-- Expanded state is remembered per session flow + node key; reopening a session with the same keys
-  restores it;
-- Settings are owned by the DSH host config (`~/.dsh/settings.yaml`); browser `localStorage` is
-  only the fallback when the host bridge is unreachable (then each browser needs its own setup);
-- Requires `MutationObserver` and `requestAnimationFrame`; without them it degrades to "fold once on
-  initial render".
+After restart, the interface returns to its original state.
 
 ---
 
-This project was entirely completed by dsh + deepseek v4 flash(max).
+## Quick Start
+
+Once installed, consecutive tool calls are automatically folded into a single bar in any DSH conversation.
+
+- **Click the fold bar** to expand or collapse the tool‑call cards (keyboard `Enter` / `Space` also work)
+- **The bar shows**: a one‑line summary of the last call plus the label “N tool calls folded · click to expand”
+
+![Expand/collapse animation](assets/expand-collapse.gif)
+
+---
+
+## Default Behaviour – First Use
+
+The plugin works immediately after installation, but you might notice two things that seem “unexpected” at first. Both are intentional defaults and can be changed easily.
+
+### ❓ Why did my thinking content disappear?
+
+**Reason**: “Keep thinking” is off by default (`keepThink: false`). Completed thinking blocks are hidden to keep the conversation cleaner.
+
+**How to restore**: go to `Settings → Plugins → Tool Fold` and turn on **“Keep thinking”**.
+
+### ❓ Why are my tool calls split into two separate fold bars?
+
+**Reason**: “Split thinking across call groups” is on by default (`splitThink: true`). The plugin treats a completed thinking block as a logical separator, folding calls before and after it independently.
+
+**How to merge them**: go to `Settings → Plugins → Tool Fold` and turn off **“Split thinking across call groups”**.
+
+> Ongoing (streaming) thinking is always visible regardless of these settings, and will only be processed according to the rules once it finishes.
+
+---
+
+## Features
+
+### Core Folding Behaviour
+
+- **Automatic folding of consecutive tool calls** – adjacent tool calls are collapsed into one bar, showing only the last call’s summary line and the number of folded items.
+- **Thinking splits call groups (enabled by default)** – a completed thinking block separates the tool calls before and after it into two independent fold bars; they are never merged across a thinking block.
+- **Thinking hidden by default, can be kept** – completed thinking is hidden to save space; when “Keep thinking” is enabled, thinking appears between fold bars (in split mode) or interpolated back between calls on expansion (in merged mode).
+- **Ongoing thinking always visible** – streaming thinking remains visible until it finishes, then follows the above rules.
+
+### Animation & Experience
+
+- **Spring‑loaded waterfall animation** – cards drop one by one on expand (with spring bounce), and on collapse they rise while heights shrink synchronously, so content below moves continuously without jumping.
+- **Sticks to the bottom without pushing out** – when expanding near the bottom, the fold bar’s viewport position is pinned so that automatic scrolling does not push it off screen.
+- **Respects system preferences** – if the system has “Reduce motion” enabled, animations are automatically disabled.
+
+### Performance & Resource Usage
+
+- **Near‑zero performance impact** – no page‑wide observers, zero engine work during streaming, and all activity is paused when the tab is hidden. Measured idle overhead is about 0.03% of a single CPU core.
+- **Optional real‑time stats** – enable “Performance stats” in the settings card to see per‑step timings and verify overhead.
+
+---
+
+## Settings
+
+Settings are found at: **Settings → Plugins → Tool Fold** (the card looks like other built‑in plugin cards and follows the light/dark theme).
+
+![Settings card](assets/settings.png)
+
+### Options
+
+| Option | Description |
+| --- | --- |
+| **Expand animation duration** | Duration of the expand/collapse animation per card (0–1000 ms, default 240 ms; 0 = instant) |
+| **Keep thinking** | Hide completed thinking by default; when enabled, thinking is shown – between fold bars in split mode, or interpolated back between calls on expansion in merged mode |
+| **Split thinking across call groups** | Enabled by default: a completed thinking block separates tool calls before and after it into independent fold bars. Disabled: thinking is folded together with the surrounding call group (legacy behaviour) |
+| **Performance stats** | Show real‑time plugin timing in the card (cumulative count and ms/s for observation callbacks, engine refresh, merge recalculation, safe rescan, summary cloning, plus the number of streaming batches short‑circuited with zero overhead) |
+
+---
+
+### Storage Location
+
+Plugin settings are persisted automatically, with the following priority:
+
+- **Primary (installed/bundle mode)** – stored via the DSH **settings service** in `~/.dsh/settings.yaml` (namespace `toolfold`). They follow the dsh host, so they persist across browsers/devices. You can also edit the file manually:
+
+  ```yaml
+  toolfold:
+    durMs: 240        # expand animation duration 0–2000 ms
+    keepThink: false  # whether to keep completed thinking visible
+    splitThink: true  # whether to split call groups by thinking
+    stats: false      # whether to enable performance stats
+  ```
+
+- **Fallback (when settings service is unavailable)** – falls back to browser `localStorage` (key `dsh-toolfold.settings.v1`), so settings are only kept in that browser. The old key `dsh-codex-collapse.settings.v1` is automatically migrated on first load.
+
+The settings card shows the current storage method (“Settings saved in DSH host config” or “Saved only in this browser”).
+
+---
+
+## Performance
+
+- **Measured on a real GUI page (8 s idle window)** – total engine time ~1.6–2.8 ms (~0.3 ms/s, ~0.03% single‑core); during a 5‑s CPU profile, engine functions appeared zero times.
+- **Zero work during streaming** – streaming thinking/text tokens are short‑circuited with O(1) checks and do not trigger any recalculation (~0.1–0.4 µs per node).
+- **Hidden tab = literally zero** – all observers and timers are disconnected when the tab is hidden; they are re‑attached and a single reconciliation run is performed when the tab becomes visible again.
+- Enable **“Performance stats”** in the settings card to see detailed timings for every plugin operation.
+
+---
+
+## Limitations & Compatibility
+
+- **DOM‑based** – folding relies on stable product DOM markers. If markers change, the worst case is that folding stops working – it will not break the chat.
+- **Splitting rules**:
+  - Ongoing thinking and plain text output separate tool call groups.
+  - Completed thinking also separates groups by default (when “Split thinking across call groups” is on); when off, thinking is folded together with its surrounding call group.
+- **State memory** – expand/collapse state is remembered per conversation flow and node key; re‑opening a conversation with the same key restores the state.
+- **Browser requirements** – needs `MutationObserver` and `requestAnimationFrame`. If unsupported, it falls back to “fold once on initial render”.
+- **Settings storage** – uses the DSH host config (`~/.dsh/settings.yaml`) when available; only falls back to `localStorage` when the host bridge is unreachable (in which case settings are browser‑local only).
+
+---
+
+> This project is entirely built with dsh + deepseek v4 flash(max).
