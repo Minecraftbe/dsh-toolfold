@@ -307,6 +307,72 @@ for (let b = 0; b < 100; b++) {
 await sleep(80);
 check('row adds ran merge passes', store.stats.pass > pass1, 'pass delta=' + (store.stats.pass - pass1));
 
+// ---- 5b. Collapse a run that keeps GROWING (streaming newest info). ----
+// The model appends more calls to the run BOTH before and while it
+// collapses. Rows added after the bar was created but before the collapse
+// (stale toggle closure) and rows added while the collapse animates must
+// all join the cascade, and the finish timer must wait for the last one —
+// otherwise they snap shut with the merge ("runs briefly, then suddenly
+// collapses").
+const flowG = document.createElement('div');
+flowG.setAttribute('data-chat-flow', '');
+document.body.appendChild(flowG);
+const g1 = makeRow('tool-call', 'g1');
+const g2 = makeRow('tool-call', 'g2');
+const g3 = makeRow('tool-call', 'g3');
+for (const [t, name] of [[g1, 'g1'], [g2, 'g2'], [g3, 'g3']]) {
+  const disc = document.createElement('div');
+  disc.setAttribute('data-disclosure-row', '');
+  disc.textContent = name + ' \u2014 initial';
+  t.appendChild(disc);
+}
+flowG.append(g1, g2, g3);
+await nextFrame(window); // discover the new flow
+await nextFrame(window); // pass
+await nextTick();
+const gbar = flowG.querySelector('.ccxBar');
+check('growth-flow bar created', gbar !== null);
+// The run grows BEFORE the collapse: the bar was created with a 3-row
+// snapshot, so a stale toggle closure would animate only those 3 rows.
+const g4 = makeRow('tool-call', 'g4');
+const disc4 = document.createElement('div');
+disc4.setAttribute('data-disclosure-row', '');
+disc4.textContent = 'g4 \u2014 streamed before collapse';
+g4.appendChild(disc4);
+flowG.appendChild(g4);
+await nextFrame(window); // pass folds g4 into the run
+await nextFrame(window);
+await nextTick();
+check('run grew past the bar-creation snapshot',
+  gbar._ccxRun !== undefined && gbar._ccxRun.rows.length === 4,
+  'rows=' + (gbar._ccxRun !== undefined ? gbar._ccxRun.rows.length : 'n/a'));
+gbar.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); // expand
+await sleep(80);
+check('growth run expanded', [g1, g2, g3, g4].every((t) => !t.classList.contains('ccxMerged')));
+gbar.dispatchEvent(new window.MouseEvent('click', { bubbles: true })); // collapse
+await sleep(30);
+check('collapse animates the CURRENT run, not the creation snapshot',
+  [g1, g2, g3, g4].every((t) => t.classList.contains('ccxCollapsing')),
+  [g1, g2, g3, g4].map((t) => t.classList.contains('ccxCollapsing')).join(','));
+// The model appends a NEW call while the collapse is animating.
+const g5 = makeRow('tool-call', 'g5');
+const disc5 = document.createElement('div');
+disc5.setAttribute('data-disclosure-row', '');
+disc5.textContent = 'g5 \u2014 streamed mid-collapse';
+g5.appendChild(disc5);
+flowG.appendChild(g5);
+await nextFrame(window); // observer sees the add \u2192 full pass
+await nextFrame(window);
+await nextTick();
+check('row added mid-collapse joins the cascade (no snap)',
+  g5.classList.contains('ccxCollapsing'), 'g5 collapsing=' + g5.classList.contains('ccxCollapsing'));
+// Wait out the extended finish timer, then everything merges together.
+await sleep(900);
+check('grown run merges after the extended collapse',
+  [g1, g2, g3, g4, g5].every((t) => t.classList.contains('ccxMerged')),
+  [g1, g2, g3, g4, g5].map((t) => t.classList.contains('ccxMerged')).join(','));
+check('no leftover collapse classes', ![g1, g2, g3, g4, g5].some((t) => t.classList.contains('ccxCollapsing')));
+
 // ---- 6. Dispose restores the DOM. ----
 disposers[0]();
 check('bars removed on dispose', flow.querySelector('.ccxBar') === null);
