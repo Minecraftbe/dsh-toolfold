@@ -1,5 +1,9 @@
 # dsh-toolfold · Tool Call Folding
 
+[![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
+
+[中文](README.md) | English
+
 > A DSH Web GUI plugin delivering a **Codex-like folding experience**: runs of consecutive
 > **tool calls** fold into a single compact bar showing a one-line summary of the **last call** —
 > click to expand/collapse. It replaces no built-in renderer, and uninstalling restores the UI
@@ -35,28 +39,27 @@
 
 ## Installation
 
-### One-line GitHub install
-
+### Install from npm (recommended)
 ```sh
-dsh plugin --profile web add github:Minecraftbe/dsh-toolfold
+dsh plugin --profile web add dsh-toolfold
 ```
 
-### Install from source
+### Alternative installation methods
 
 ```sh
+# Install from GitHub
+dsh plugin --profile web add github:Minecraftbe/dsh-toolfold
+
+# Or install from source
 git clone https://github.com/Minecraftbe/dsh-toolfold.git
 dsh plugin --profile web add ./dsh-toolfold
 ```
 
-After installing, **restart dsh and refresh the browser** to activate (bundle layers are composed
-at boot). Verify the plugin reached the final config with:
+After installation, **restart dsh and refresh your browser** for the changes to take effect (the bundle layer is composed at startup). You can verify that the final configuration is active with the following command:
 
 ```sh
 dsh --profile web --dump-config
 ```
-
-> If an earlier version was mounted manually with a `toolfold` row in `cordis.patch.yml`,
-> remove that row before switching to this channel to avoid double-mounting.
 
 ### Uninstall
 
