@@ -30,10 +30,8 @@ jobs:
 
       - name: Dry-run
         if: github.event.inputs.dry_run == 'true'
-        run: |
-          pnpm whoami
-          pnpm publish --dry-run --access public --no-git-checks
+        run: pnpm publish --dry-run --access public --no-git-checks
 
       - name: Publish
         if: github.event.inputs.dry_run != 'true'
-        run: pnpm publish --provenance --access public --no-git-checks
+        run: npm publish
