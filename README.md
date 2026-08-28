@@ -1,5 +1,9 @@
 # dsh-toolfold · 工具调用折叠
 
+[![Awesome DSH Plugin](https://awesome-dsh-plugin.com/badge.svg)](https://awesome-dsh-plugin.com)
+
+中文 | [English](README.en.md)
+
 > DSH Web GUI 插件，提供**类 Codex 的工具折叠体验**：把连续的**工具调用**折叠成一条简洁的
 > 折叠条，只展示最后一个调用的一行摘要，点击即可展开/收起。
 > 不替换任何内置渲染器，卸载后界面完全恢复原样。
@@ -28,16 +32,18 @@
 ## 安装
 
 
-
-### GitHub 一行安装
-
+### 从npm安装(推荐)
 ```sh
-dsh plugin --profile web add github:Minecraftbe/dsh-toolfold
+dsh plugin --profile web add dsh-toolfold
 ```
 
-### 从源码安装
+### 其他安装方式
 
 ```sh
+# 从 Github 安装
+dsh plugin --profile web add github:Minecraftbe/dsh-toolfold
+
+# 或从源码安装
 git clone https://github.com/Minecraftbe/dsh-toolfold.git
 dsh plugin --profile web add ./dsh-toolfold
 ```
@@ -48,8 +54,6 @@ dsh plugin --profile web add ./dsh-toolfold
 ```sh
 dsh --profile web --dump-config
 ```
-
-> 早期版本若曾在 `cordis.patch.yml` 手工加过 `toolfold` 行，先删除该行再切换，避免双挂载。
 
 ### 卸载
 
