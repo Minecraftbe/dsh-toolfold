@@ -33,5 +33,5 @@ jobs:
         run: pnpm publish --dry-run --access public --no-git-checks
 
       - name: Publish
-        if: github.event_name == 'release' && github.event.inputs.dry_run != 'true'
+        if: github.event.inputs.dry_run != 'true'
         run: pnpm publish --provenance --access public --no-git-checks
