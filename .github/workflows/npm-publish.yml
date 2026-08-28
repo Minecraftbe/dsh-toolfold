@@ -2,23 +2,37 @@ name: Publish Package
 
 on:
   release:
-    types: [created]
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run: validate but do not publish"
+        type: boolean
+        default: false
 
 permissions:
-  id-token: write  # Required for OIDC
+  id-token: write
   contents: read
 
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
           version: 11
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org/
           package-manager-cache: false
-      - run: pnpm publish --no-git-checks
+      - run: pnpm install --frozen-lockfile
+
+      - name: Dry-run
+        if: github.event.inputs.dry_run == 'true'
+        run: pnpm publish --dry-run --access public --no-git-checks
+
+      - name: Publish
+        if: github.event_name == 'release' && github.event.inputs.dry_run != 'true'
+        run: pnpm publish --provenance --access public --no-git-checks
