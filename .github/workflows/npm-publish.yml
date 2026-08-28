@@ -34,4 +34,4 @@ jobs:
 
       - name: Publish
         if: github.event.inputs.dry_run != 'true'
-        run: npm publish
+        run: pnpm publish --provenance --access public --no-git-checks
