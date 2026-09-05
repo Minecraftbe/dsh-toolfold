@@ -15,6 +15,7 @@
 - 删除 `lib/build-dynamic.cjs`（字符串手术生成器）。浏览器产物改为**构建期生成、不入库**：`lib/client.js` / `lib/dynamic-body.js`（及 `.map`）已 gitignore，由 `prepare: pnpm build`（tsdown）重建——`pnpm publish` 与 git-hosted 安装都会先跑 prepare 再打包，`files` 白名单只含构建产物（`lib/index.js`、`lib/client.js`，不含 src / map）。`package.json` 增加 `prepare` / `build` / `build:watch` 脚本与 `tsdown` devDependency。改动流程：只改 `src/` → `pnpm build` → 验证。
 - host 半源码 `lib/index.js` 搬家为 `src/host/index.js`（与 `src/client/` 对称；ESM，无需 scoped package.json），由 tsdown 第三个 entry（`platform: 'node'`，`schemastery` 保持 external）构建回 `lib/index.js`——`main` / `exports["."]` / `files` 指向不变。至此 `lib/` 下 100% 生成物，`.gitignore` 收成一行 `lib/`（源码层/产物层不再混放）。
 - 自带工具去本机硬编码：`jsdom`（29.1.1）与 `playwright`（1.61.1）收为 devDependencies，`tools/engine-smoke.mjs` / `tools/live-probe.mjs` 改按包名解析；live-probe 的 Chrome 路径改为 `CHROME_PATH` 环境变量优先，否则按平台取第一个存在的默认位置（Windows 沿用原路径）。`pnpm install` 后 `test:engine` / `probe:live` 开箱即用。
+- 思考显隐两开关合并为「思考显示」三档下拉（`thinkMode: auto/keep/hide`，默认 `auto`）：`thinkAuto` 开启时 `keepThink` 是死控件，hint 还得专门解释生效条件；合并后无死状态。`thinkAuto` / `keepThink` 保留为 deprecated 别名继续校验，老配置（settings.yaml / localStorage）自动推导迁移且可回滚；卡片、README 设置说明同步更新。
 
 ## [0.1.8] - 2026-08-28
 

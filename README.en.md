@@ -58,6 +58,8 @@ dsh plugin --profile web remove dsh-toolfold
 
 After restart, the interface returns to its original state.
 
+> ⚠️ **Version support**: starting from `0.1.9`, this plugin only supports DSH `>= 0.1.2-rc.1` and `< 0.1.3`. On DSH versions outside this range, the settings card shows a version-mismatch warning and folding may not work correctly.
+
 ---
 
 ## Quick Start
@@ -77,9 +79,9 @@ The plugin works immediately after installation, but you might notice two things
 
 ### ❓ Why did my thinking content disappear?
 
-**Reason**: “Keep thinking” is off by default (`keepThink: false`). Completed thinking blocks are hidden to keep the conversation cleaner.
+**Reason**: “Thinking display” defaults to “Auto-follow official fold” — completed thinking is hidden unless the official Compact view folds the whole process block.
 
-**How to restore**: go to `Settings → Plugins → Tool Fold` and turn on **“Keep thinking”**.
+**How to restore**: go to `Settings → Plugins → Tool Fold` and set **“Thinking display”** to **“Always keep”**.
 
 ### ❓ Why are my tool calls split into two separate fold bars?
 
@@ -97,7 +99,7 @@ The plugin works immediately after installation, but you might notice two things
 
 - **Automatic folding of consecutive tool calls** – adjacent tool calls are collapsed into one bar, showing only the last call’s summary line and the number of folded items.
 - **Thinking splits call groups (enabled by default)** – a completed thinking block separates the tool calls before and after it into two independent fold bars; they are never merged across a thinking block.
-- **Thinking hidden by default, can be kept** – completed thinking is hidden to save space; when “Keep thinking” is enabled, thinking appears between fold bars (in split mode) or interpolated back between calls on expansion (in merged mode).
+- **Thinking display (three modes)** – “Auto-follow official fold” by default: thinking is kept when the official view folds the whole process block, hidden otherwise; “Always keep” shows it between fold bars (split mode) or interpolated back on expansion; “Always hide” never shows completed thinking.
 - **Ongoing thinking always visible** – streaming thinking remains visible until it finishes, then follows the above rules.
 
 ### Animation & Experience
@@ -124,7 +126,7 @@ Settings are found at: **Settings → Plugins → Tool Fold** (the card looks li
 | Option | Description |
 | --- | --- |
 | **Expand animation duration** | Duration of the expand/collapse animation per card (0–1000 ms, default 240 ms; 0 = instant) |
-| **Keep thinking** | Hide completed thinking by default; when enabled, thinking is shown – between fold bars in split mode, or interpolated back between calls on expansion in merged mode |
+| **Thinking display** | How completed thinking is shown: auto-follow official fold (default) / always keep / always hide |
 | **Split thinking across call groups** | Enabled by default: a completed thinking block separates tool calls before and after it into independent fold bars. Disabled: thinking is folded together with the surrounding call group (legacy behaviour) |
 | **Performance stats** | Show real‑time plugin timing in the card (cumulative count and ms/s for observation callbacks, engine refresh, merge recalculation, safe rescan, summary cloning, plus the number of streaming batches short‑circuited with zero overhead) |
 
@@ -139,7 +141,7 @@ Plugin settings are persisted automatically, with the following priority:
   ```yaml
   toolfold:
     durMs: 240        # expand animation duration 0–2000 ms
-    keepThink: false  # whether to keep completed thinking visible
+    thinkMode: auto   # completed-thinking display: auto-follow official fold / keep always / hide always
     splitThink: true  # whether to split call groups by thinking
     stats: false      # whether to enable performance stats
   ```

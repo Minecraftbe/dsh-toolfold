@@ -18,6 +18,7 @@ function adoptSection(store, section) {
   store.update({
     enabled: section.enabled === undefined ? undefined : section.enabled === true,
     durMs: clampDur(section.durMs),
+    thinkMode: section.thinkMode === undefined ? undefined : section.thinkMode,
     keepThink: section.keepThink === undefined ? undefined : section.keepThink === true,
     thinkAuto: section.thinkAuto === undefined ? undefined : section.thinkAuto === true,
     splitThink: section.splitThink === undefined ? undefined : section.splitThink === true,

@@ -40,16 +40,37 @@ export const inject = ['settings', 'webServer']
 // ships the settingsNamespace() helper, so a bare string is the contract.
 const NS = 'toolfold'
 const API_PATH = '/api/dsh-toolfold/settings'
-const FIELDS = ['enabled', 'durMs', 'keepThink', 'thinkAuto', 'splitThink', 'stats']
+const FIELDS = ['enabled', 'durMs', 'thinkMode', 'keepThink', 'thinkAuto', 'splitThink', 'stats']
+// thinkAuto/keepThink are DEPRECATED aliases for thinkMode (kept validated so
+// old sections, old clients, and downgraded plugin versions keep working;
+// the engine only reads the resolved thinkMode below).
 
 const SCHEMA = z.object({
   enabled: z.boolean().default(true),
   durMs: z.number().step(10).min(0).max(2000).default(240),
+  // No .default(): an unset thinkMode must stay unset so the snapshot can
+  // derive it from the deprecated keys (a default would mask them).
+  thinkMode: z.union([z.const('auto'), z.const('keep'), z.const('hide')]),
   keepThink: z.boolean().default(false),
   thinkAuto: z.boolean().default(true),
   splitThink: z.boolean().default(true),
   stats: z.boolean().default(false),
 })
+
+/**
+ * Resolve the canonical think mode for one section. An explicitly set,
+ * valid thinkMode wins; otherwise derive it from the deprecated keys so
+ * pre-merge preferences survive the upgrade; default 'auto'. Total —
+ * never throws. (Client twin: resolveThinkMode in src/client/settings.js.)
+ */
+function resolveThinkMode(section) {
+  var mode = section !== undefined && section !== null ? section.thinkMode : undefined
+  if (mode === 'keep' || mode === 'hide' || mode === 'auto') return mode
+  if (section !== undefined && section !== null && section.thinkAuto === false) {
+    return section.keepThink === true ? 'keep' : 'hide'
+  }
+  return 'auto'
+}
 
 // Supported DSH product range. MUST mirror package.json `engines.dsh`
 // (">=0.1.2-rc.1 <0.1.3"); DSH itself never validates that field, so this
@@ -188,7 +209,7 @@ export function apply(ctx) {
     return {
       ok: true,
       value: {
-        value,
+        value: { ...value, thinkMode: resolveThinkMode(value) },
         ...(revision === undefined ? {} : { revision }),
         writable: ctx.settings.writable,
       },

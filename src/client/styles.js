@@ -69,6 +69,9 @@ var cardCss = [
   '.ccxBadge{flex:none;border-radius:999px;padding:1px 8px;font-size:11px;line-height:17px;white-space:nowrap;font-weight:500;background:var(--dsw-alias-bg-module-platform,#f0f0f2);color:var(--dsw-alias-label-secondary,#666)}',
   '.ccxRange{width:100%;height:34px;margin:0;accent-color:var(--dsw-alias-brand-primary,#4d6bfe);cursor:pointer}',
   '.ccxToggle{width:16px;height:16px;margin:0;flex:none;accent-color:var(--dsw-alias-brand-primary,#4d6bfe);cursor:pointer}',
+  '.ccxSelect{flex:none;max-width:60%;font:inherit;font-size:13px;color:var(--dsw-alias-label-primary,#222);background:var(--dsw-alias-bg-layer-3,#fff);border:1px solid var(--dsw-alias-border-l2,#e4e4e7);border-radius:8px;padding:5px 8px;cursor:pointer}',
+  '.ccxSelect:disabled{opacity:.5;cursor:default}',
+  '.ccxSelect:focus-visible{outline:2px solid var(--dsw-alias-brand-primary,#4d6bfe);outline-offset:1px}',
   '.ccxStatRow{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 0;font-size:12px;line-height:1.5}',
   '.ccxStatValue{flex:none;font-variant-numeric:tabular-nums;color:var(--dsw-alias-label-secondary,#666)}',
   // Version-mismatch warning icon (header) + CSS-only hover tooltip.

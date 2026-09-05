@@ -9,7 +9,7 @@ const { acquireReact } = require('./react-env.js');
 /**
  * One plugin card under Settings → 插件, owning the folding preferences.
  * @param props - injected face: useCcxSettings snapshot hook, setDur,
- *   setKeepThink; every change applies live through the shared store.
+ *   setThinkMode; every change applies live through the shared store.
  * @returns the card.
  */
 function SettingsCard(props) {
@@ -75,22 +75,20 @@ function SettingsCard(props) {
       onChange: function (event) { props.setDur(Number(event.target.value)); }
     }),
     React.createElement('p', { className: 'ccxFieldHint' }, '折叠与展开的弹性动画时长，0 为瞬时切换'));
+  // One dropdown, three modes — the two old checkboxes (keepThink, only
+  // meaningful with auto off) collapsed a dead control into the UI.
+  var thinkMode = state.thinkMode === 'keep' || state.thinkMode === 'hide' ? state.thinkMode : 'auto';
   var thinkField = React.createElement('div', { className: 'ccxField' },
     React.createElement('div', { className: 'ccxFieldHead' },
-      React.createElement('label', { className: 'ccxFieldLabel', htmlFor: 'ccx-keep-think' }, '保留思考'),
-      React.createElement('input', {
-        id: 'ccx-keep-think', type: 'checkbox', className: 'ccxToggle', disabled: !state.enabled, checked: state.keepThink,
-        onChange: function (event) { props.setKeepThink(event.target.checked); }
-      })),
-    React.createElement('p', { className: 'ccxFieldHint' }, '手动保留已完成的思考（「自动跟随」关闭时生效）。保留时：分隔模式下思考显示在两条折叠条之间，合并模式下展开时按原顺序插回'));
-  var autoField = React.createElement('div', { className: 'ccxField' },
-    React.createElement('div', { className: 'ccxFieldHead' },
-      React.createElement('label', { className: 'ccxFieldLabel', htmlFor: 'ccx-think-auto' }, '思考自动跟随官方折叠'),
-      React.createElement('input', {
-        id: 'ccx-think-auto', type: 'checkbox', className: 'ccxToggle', disabled: !state.enabled, checked: state.thinkAuto,
-        onChange: function (event) { props.setThinkAuto(event.target.checked); }
-      })),
-    React.createElement('p', { className: 'ccxFieldHint' }, '开启（默认）：DSH 官方「对话显示 = Compact」把已完成轮次的过程整块收起时，思考自动保留可见（大块已被官方折叠，思考不应再默认消失）；官方未折叠时思考默认隐藏以节省空间。关闭：思考显隐完全由上方「保留思考」决定'));
+      React.createElement('label', { className: 'ccxFieldLabel', htmlFor: 'ccx-think-mode' }, '思考显示'),
+      React.createElement('select', {
+        id: 'ccx-think-mode', className: 'ccxSelect', disabled: !state.enabled, value: thinkMode,
+        onChange: function (event) { props.setThinkMode(event.target.value); }
+      },
+        React.createElement('option', { value: 'auto' }, '自动跟随官方折叠'),
+        React.createElement('option', { value: 'keep' }, '始终保留'),
+        React.createElement('option', { value: 'hide' }, '始终隐藏'))),
+    React.createElement('p', { className: 'ccxFieldHint' }, '已完成思考的显示方式。自动（默认）：官方「对话显示 = Compact」收起整块过程时保留思考，其余时候隐藏以节省空间；始终保留：思考一直可见（分隔模式下位于两条折叠条之间）；始终隐藏：已完成的思考一律不显示'));
   var splitField = React.createElement('div', { className: 'ccxField' },
     React.createElement('div', { className: 'ccxFieldHead' },
       React.createElement('label', { className: 'ccxFieldLabel', htmlFor: 'ccx-split-think' }, '思考分隔调用组'),
@@ -111,7 +109,7 @@ function SettingsCard(props) {
     ? '设置保存在 DSH 主机配置（~/.dsh/settings.yaml），由 DSH 设置服务持久化'
     : '未检测到 DSH 设置服务，设置仅保存在本浏览器（localStorage）';
   var body = React.createElement('div', { className: 'ccxBody' },
-    enabledField, durField, thinkField, autoField, splitField, statsField,
+    enabledField, durField, thinkField, splitField, statsField,
     React.createElement('p', { className: 'ccxFieldHint' }, storageHint));
   var children = [header, body];
   if (state.stats) {

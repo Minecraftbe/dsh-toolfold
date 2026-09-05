@@ -5,7 +5,7 @@
  * What it verifies:
  *   1. a run of tool calls folds into a bar, and settled thinking SPLITS
  *      one call sequence into independent bars (rows hidden, bars in place);
- *   2. keepThink toggling keeps the think row visible between the bars;
+ *   2. thinkMode keep keeps the think row visible between the bars;
  *   3. streaming text mutations are ignored with ZERO passes (skip counter);
  *   4. tool-content mutations only refresh the affected bar clone;
  *   5. expand / collapse round-trip;
@@ -137,7 +137,7 @@ check('bar2 sits after the think row', bar2 !== null && bar2.nextElementSibling 
 check('first block rows hidden when collapsed', [t1, t2].every((t) => t.classList.contains('ccxMerged')));
 check('second block rows hidden when collapsed', [t3, t4].every((t) => t.classList.contains('ccxMerged')));
 check('think row is NOT merged into any bar', !thinkRow.classList.contains('ccxMerged'));
-check('think row hidden as empty step (keepThink off)', thinkRow.classList.contains('ccxEmpty'));
+check('think row hidden as empty step (auto hides thinking)', thinkRow.classList.contains('ccxEmpty'));
 
 // ---- 1b. DSH settings bridge (official scope → host route → localStorage). ----
 const bridge = window.__toolfoldBridge;
@@ -152,16 +152,16 @@ window.fetch = (url, init) => {
   const method = init === undefined ? 'GET' : init.method;
   if (method === 'GET') {
     return Promise.resolve({ ok: true, json: () => Promise.resolve({
-      ok: true, value: { value: { durMs: 500, keepThink: true, splitThink: true, stats: false }, revision: 3, writable: true },
+      ok: true, value: { value: { durMs: 500, thinkMode: 'keep', splitThink: true, stats: false }, revision: 3, writable: true },
     }) });
   }
   const body = JSON.parse(init.body);
-  const value = { durMs: body.op === 'set' && body.field === 'durMs' ? body.value : 500, keepThink: true, splitThink: true, stats: false };
+  const value = { durMs: body.op === 'set' && body.field === 'durMs' ? body.value : 500, thinkMode: 'keep', splitThink: true, stats: false };
   return Promise.resolve({ ok: true, json: () => Promise.resolve({ ok: true, value: { value, revision: 4, writable: true } }) });
 };
 await bridge.load();
 check('DSH route read adopts the host section',
-  store.getSnapshot().durMs === 500 && store.getSnapshot().keepThink === true,
+  store.getSnapshot().durMs === 500 && store.getSnapshot().thinkMode === 'keep',
   JSON.stringify(store.getSnapshot()));
 check('DSH-backed status after route read', bridge.status() === 'dsh');
 bridge.write('durMs', 700);
@@ -169,16 +169,18 @@ await sleep(30);
 check('write went through the host route (POST with field)',
   bridgeCalls.some((c) => c.init !== undefined && c.init.method === 'POST' && c.init.body.indexOf('"durMs"') !== -1));
 check('optimistic local update applied immediately', store.getSnapshot().durMs === 700);
-check('host write response adopted', store.getSnapshot().durMs === 700 && store.getSnapshot().keepThink === true);
+check('host write response adopted', store.getSnapshot().durMs === 700 && store.getSnapshot().thinkMode === 'keep');
 
 // ---- 1b2. DSH version-mismatch reporting (the route's `dsh` field). ----
 check('compat unknown before the first host report', bridge.compat().state === 'unknown');
 const consoleWarns = [];
 window.console.warn = (message) => { consoleWarns.push(String(message)); };
-const fakeRoute = (dshInfo) => (url, init) => {
+const fakeRoute = (dshInfo, value) => (url, init) => {
   const method = init === undefined ? 'GET' : init.method;
-  const value = { durMs: 500, keepThink: true, splitThink: true, stats: false };
-  const body = { ok: true, value: { value, revision: 5, writable: true } };
+  const section = value === undefined
+    ? { durMs: 500, thinkMode: 'keep', splitThink: true, stats: false }
+    : value;
+  const body = { ok: true, value: { value: section, revision: 5, writable: true } };
   if (dshInfo !== undefined) body.dsh = dshInfo;
   return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
 };
@@ -199,34 +201,47 @@ window.fetch = fakeRoute({ version: '0.1.2-rc.1', state: 'ok' });
 await bridge.load();
 check('in-range report clears the mismatch state', bridge.compat().state === 'ok' && consoleWarns.length === 1);
 // Restore defaults so the timing-sensitive collapse checks below stay valid.
-store.update({ durMs: 240, thinkAuto: false, keepThink: false });
+store.update({ durMs: 240, thinkMode: 'hide' });
 
-// ---- 1c. keepThink on → think row stays visible between the two bars. ----
-store.update({ keepThink: true });
+// ---- 1b3. Legacy + invalid section normalization (pre-merge prefs survive). ----
+window.fetch = fakeRoute(undefined, { thinkAuto: false, keepThink: true });
+await bridge.load();
+check('legacy host section normalizes to thinkMode keep',
+  store.getSnapshot().thinkMode === 'keep', JSON.stringify(store.getSnapshot().thinkMode));
 await nextFrame(window);
 await nextFrame(window);
 await nextTick();
-check('keepThink on keeps think row visible between bars',
+check('normalized keep shows the think row',
+  !thinkRow.classList.contains('ccxEmpty') && !thinkRow.classList.contains('ccxMerged'));
+window.fetch = fakeRoute(undefined, { thinkMode: 'sometimes' });
+await bridge.load();
+check('invalid thinkMode never resets the current mode',
+  store.getSnapshot().thinkMode === 'keep', JSON.stringify(store.getSnapshot().thinkMode));
+store.update({});
+check('empty patch preserves thinkMode', store.getSnapshot().thinkMode === 'keep');
+store.update({ durMs: 240, thinkMode: 'hide' });
+
+// ---- 1c. thinkMode keep → think row stays visible between the two bars. ----
+store.update({ thinkMode: 'keep' });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('thinkMode keep keeps think row visible between bars',
   !thinkRow.classList.contains('ccxEmpty') && !thinkRow.classList.contains('ccxMerged'));
 check('bars still split around the visible think', flow.querySelectorAll('.ccxBar').length === 2);
-store.update({ keepThink: false });
+store.update({ thinkMode: 'hide' });
 await nextFrame(window);
 await nextFrame(window);
 await nextTick();
-check('keepThink off hides the think row again', thinkRow.classList.contains('ccxEmpty'));
+check('thinkMode hide hides the think row again', thinkRow.classList.contains('ccxEmpty'));
 // Back on the DEFAULT auto rule (this flow has no official turn-process chip,
-// so auto hides thinking — even while keepThink is on).
-store.update({ thinkAuto: true, keepThink: true });
+// so auto hides thinking).
+store.update({ thinkMode: 'auto' });
 await nextFrame(window);
 await nextFrame(window);
 await nextTick();
-check('auto rule hides thinking even with keepThink on (no official chip)',
+check('auto rule hides thinking (no official chip)',
   thinkRow.classList.contains('ccxEmpty'));
-store.update({ thinkAuto: true, keepThink: false });
-await nextFrame(window);
-await nextFrame(window);
-await nextTick();
-check('auto rule baseline stays hidden', thinkRow.classList.contains('ccxEmpty'));
 
 // ---- 1d. splitThink off → the original merge: one bar across the think. ----
 store.update({ splitThink: false });
@@ -521,27 +536,27 @@ await nextFrame(window); // attribute flip \u2192 think reason
 await nextFrame(window);
 await nextTick();
 check('newly settled think hides its wrapper too', runWrap.classList.contains('ccxWrapGone'));
-// Manual keepThink semantics (自动跟随 off): keepThink on must bring the
+// Manual keep semantics (thinkMode keep): keep must bring the
 // wrapper back (think visible again).
-store.update({ thinkAuto: false, keepThink: true });
+store.update({ thinkMode: 'keep' });
 await nextFrame(window);
 await nextFrame(window);
 await nextTick();
-check('keepThink on restores the hidden think wrapper',
+check('thinkMode keep restores the hidden think wrapper',
   !thinkWrap.classList.contains('ccxWrapGone') && !runWrap.classList.contains('ccxWrapGone'),
   'thinkWrapGone=' + thinkWrap.classList.contains('ccxWrapGone')
     + ', runWrapGone=' + runWrap.classList.contains('ccxWrapGone'));
-store.update({ thinkAuto: false, keepThink: false });
+store.update({ thinkMode: 'hide' });
 await nextFrame(window);
 await nextFrame(window);
 await nextTick();
-check('keepThink off hides the think wrapper again', thinkWrap.classList.contains('ccxWrapGone'));
+check('thinkMode hide hides the think wrapper again', thinkWrap.classList.contains('ccxWrapGone'));
 
 // ---- 5e. 思考自动跟随官方折叠 (DSH Compact transcript). ----
 // With the product's official turn-process fold active in a flow, auto mode
 // preserves settled thinking; once the official markers disappear (the view
 // is back to Normal), auto falls back to hiding settled thinking again.
-store.update({ thinkAuto: true, keepThink: false });
+store.update({ thinkMode: 'auto' });
 await nextFrame(window);
 await nextFrame(window);
 await nextTick();

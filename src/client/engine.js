@@ -615,10 +615,28 @@ function installCollapseEngine(doc, settings, timers) {
     return false;
   }
 
+  /**
+   * Resolve the canonical think mode for a snapshot. An explicitly set,
+   * valid thinkMode wins; otherwise derive it from the deprecated
+   * thinkAuto / keepThink keys so pre-merge preferences survive; default
+   * 'auto'. Total — never throws. (Host twin: resolveThinkMode in
+   * src/host/index.js. Snapshots from the store are already normalized,
+   * so the legacy branch is belt-and-braces only.)
+   */
+  function resolveThinkMode(snap) {
+    var mode = snap !== undefined && snap !== null ? snap.thinkMode : undefined;
+    if (mode === 'keep' || mode === 'hide' || mode === 'auto') return mode;
+    if (snap !== undefined && snap !== null && snap.thinkAuto === false) {
+      return snap.keepThink === true ? 'keep' : 'hide';
+    }
+    return 'auto';
+  }
+
   /** Effective keep-think flag for one flow (see flowHasOfficialFold). */
   function effectiveKeepThink(flow) {
-    var snap = settings.getSnapshot();
-    if (snap.thinkAuto === false) return snap.keepThink === true;
+    var mode = resolveThinkMode(settings.getSnapshot());
+    if (mode === 'keep') return true;
+    if (mode === 'hide') return false;
     return flowHasOfficialFold(flow);
   }
 
