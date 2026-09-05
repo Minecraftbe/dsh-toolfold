@@ -1,9 +1,11 @@
 /**
- * dsh-toolfold client build — tsdown config.
+ * dsh-toolfold build — tsdown config.
  *
- * ONE modular source graph (src/client/*.js, CommonJS — see the scoped
- * package.json) bundles into TWO browser artifacts, mirroring how DSH's own
- * client packages are built (cf. packages/client/tsdown.client.ts):
+ * TWO source graphs, THREE artifacts, all under a gitignored lib/:
+ *
+ *   src/client/*.js (CommonJS — see the scoped package.json) bundles into
+ *   TWO browser artifacts, mirroring how DSH's own client packages are
+ *   built (cf. packages/client/tsdown.client.ts):
  *
  *   lib/client.js        — installed loader artifact. Served to the browser
  *                          through exports["./client"] and the client-modules
@@ -17,16 +19,28 @@
  *                          evaluated as `async () => { … }`, ending with
  *                          `return module.exports;`.
  *
- * React is never imported by the source (the settings card uses hooks, so it
- * must use the host's React instance). The wrapper intro seeds whichever
- * instance a channel provides — the loader's `require('react')` in the
- * installed channel, the runner's closure `React` parameter in the dynamic
- * channel — into globalThis.__dshToolfoldReact, which src/client/react-env.js
- * reads back at card-registration/render time. Headless harnesses provide
- * neither and simply never register the card.
+ *   src/host/index.js (ESM — matches the root "type": "module", no scoped
+ *   package.json needed) bundles into ONE node artifact:
  *
- * Build:  tsdown            (or: node <dsh>/node_modules/tsdown/dist/run.mjs
- *                            --config tsdown.config.mjs)
+ *   lib/index.js         — host half (package main / exports["."], the
+ *                          plugin row's entry). Plain ESM in, plain ESM out:
+ *                          no transform is needed, but routing it through
+ *                          the same build keeps lib/ 100% generated and the
+ *                          edit loop uniform (edit src/ → pnpm build).
+ *                          schemastery stays external (peer dependency) and
+ *                          node: builtins stay external (platform: 'node').
+ *
+ * React is never imported by the client source (the settings card uses
+ * hooks, so it must use the host's React instance). The wrapper intro
+ * seeds whichever instance a channel provides — the loader's
+ * `require('react')` in the installed channel, the runner's closure
+ * `React` parameter in the dynamic channel — into
+ * globalThis.__dshToolfoldReact, which src/client/react-env.js reads back
+ * at card-registration/render time. Headless harnesses provide neither
+ * and simply never register the card.
+ *
+ * Build:  pnpm build  (tsdown; devDependency — `pnpm install` provides it,
+ *           `prepare` runs the build before pack/publish)
  */
 const wrapper = [
   'var module = { exports: {} };',
@@ -44,7 +58,7 @@ const base = {
   target: 'es2020',
   dts: false,
   sourcemap: true,
-  clean: false, // lib/ also holds the host half (lib/index.js) — never wipe it
+  clean: false, // three entries share one outDir — never let one wipe the others
 };
 
 // The entry assigns module.exports = plugin directly; keep that shape (no
@@ -72,6 +86,24 @@ export default [
       banner: '',
       intro: wrapper,
       footer: '\nreturn module.exports;',
+    },
+  },
+  {
+    name: 'dsh-toolfold/host',
+    entry: { index: './src/host/index.js' },
+    outDir: './lib',
+    format: 'esm',
+    platform: 'node',
+    target: 'es2020',
+    dts: false,
+    sourcemap: true,
+    clean: false, // shares outDir with the browser entries — never wipe it
+    // schemastery is a peer dependency: keep the bare import so the host
+    // resolves the deployment's own copy (bundling it would shadow the
+    // shared schema runtime and bloat the artifact).
+    deps: { neverBundle: ['schemastery'] },
+    outputOptions: {
+      entryFileNames: 'index.js',
     },
   },
 ];

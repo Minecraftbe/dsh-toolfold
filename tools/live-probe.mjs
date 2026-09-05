@@ -8,25 +8,47 @@
  * work. Run it briefly and it closes the browser afterwards.
  *
  * Usage: node tools/live-probe.mjs [url]
- * Requires playwright (resolved from the dsh workspace checkout) and a local
- * Chrome/Edge binary.
+ * Requires playwright (devDependency — `pnpm install` provides it) and a
+ * local Chrome binary (CHROME_PATH overrides the platform default below).
  */
 import { createRequire } from 'module';
-import { readFileSync } from 'fs';
+import { existsSync, readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('D:/Applications/deepseek-harness/dsh/node_modules/.pnpm/playwright@1.61.1/node_modules/playwright');
+const { chromium } = require('playwright');
 
 const here = dirname(fileURLToPath(import.meta.url));
 const bodySrc = readFileSync(join(here, '..', 'lib', 'dynamic-body.js'), 'utf8');
+
+/**
+ * Resolve the browser binary: explicit CHROME_PATH wins, otherwise take
+ * the first platform default that exists. No bundled browsers are
+ * downloaded — the probe drives the machine's real Chrome.
+ */
+function resolveChrome() {
+  if (process.env.CHROME_PATH !== undefined && process.env.CHROME_PATH !== '') return process.env.CHROME_PATH;
+  const candidates = process.platform === 'darwin'
+    ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome']
+    : process.platform === 'win32'
+      ? ['C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Google/Chrome/Application/chrome.exe']
+      : ['/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+  for (const candidate of candidates) {
+    try {
+      if (existsSync(candidate)) return candidate;
+    } catch {
+      // keep looking
+    }
+  }
+  throw new Error('no Chrome binary found — set CHROME_PATH to its location');
+}
 
 const url = process.argv[2] || 'http://127.0.0.1:3080';
 const WINDOW_MS = 8000;
 
 const browser = await chromium.launch({
-  executablePath: 'C:/Program Files/Google/Chrome/Application/chrome.exe',
+  executablePath: resolveChrome(),
   headless: true,
   pipe: false,
   args: ['--no-sandbox', '--disable-dev-shm-usage'],

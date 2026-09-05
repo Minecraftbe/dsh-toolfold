@@ -17,7 +17,7 @@
  * claim.
  *
  * Usage: node tools/engine-smoke.mjs
- * Requires jsdom (resolved from the dsh workspace checkout).
+ * Requires jsdom (devDependency — `pnpm install` provides it).
  */
 import { createRequire } from 'module';
 import { readFileSync } from 'fs';
@@ -29,8 +29,7 @@ const require = createRequire(import.meta.url);
 const here = dirname(fileURLToPath(import.meta.url));
 const root = join(here, '..');
 
-// Resolved from the dsh workspace checkout (jsdom is not a dependency here).
-const { JSDOM } = require('D:/Applications/deepseek-harness/dsh/node_modules/jsdom');
+const { JSDOM } = require('jsdom');
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const nextFrame = (win) => new Promise((resolve) => win.requestAnimationFrame(resolve));

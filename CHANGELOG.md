@@ -12,7 +12,9 @@
   - `lib/client.js(.map)` —— 安装通道 loader 产物（`window.__ModuleLoader__.load`，经 `exports["./client"]` 加载），行为与旧文件一致；
   - `lib/dynamic-body.js(.map)` —— 动态通道 body（同一模块图去掉 loader 包装），供动态插件会话与 `tools/live-probe.mjs` 使用；
   - React 不再静态导入：构建 wrapper 将通道提供的 React 种入 `globalThis.__dshToolfoldReact`（安装通道 `require('react')` / 动态通道闭包参数 `React`），无 React 的无头环境仅跳过设置卡片注册。
-- 删除 `lib/build-dynamic.cjs`（字符串手术生成器）。浏览器产物改为**构建期生成、不入库**：`lib/client.js` / `lib/dynamic-body.js`（及 `.map`）已 gitignore，由 `prepare: pnpm build`（tsdown）重建——`pnpm publish` 与 git-hosted 安装都会先跑 prepare 再打包，`files` 白名单只含构建产物（`lib/index.js`、`lib/client.js`，不含 src / map）。`package.json` 增加 `prepare` / `build` / `build:watch` 脚本与 `tsdown` devDependency。改动流程：只改 `src/client/` → `pnpm build` → 验证。
+- 删除 `lib/build-dynamic.cjs`（字符串手术生成器）。浏览器产物改为**构建期生成、不入库**：`lib/client.js` / `lib/dynamic-body.js`（及 `.map`）已 gitignore，由 `prepare: pnpm build`（tsdown）重建——`pnpm publish` 与 git-hosted 安装都会先跑 prepare 再打包，`files` 白名单只含构建产物（`lib/index.js`、`lib/client.js`，不含 src / map）。`package.json` 增加 `prepare` / `build` / `build:watch` 脚本与 `tsdown` devDependency。改动流程：只改 `src/` → `pnpm build` → 验证。
+- host 半源码 `lib/index.js` 搬家为 `src/host/index.js`（与 `src/client/` 对称；ESM，无需 scoped package.json），由 tsdown 第三个 entry（`platform: 'node'`，`schemastery` 保持 external）构建回 `lib/index.js`——`main` / `exports["."]` / `files` 指向不变。至此 `lib/` 下 100% 生成物，`.gitignore` 收成一行 `lib/`（源码层/产物层不再混放）。
+- 自带工具去本机硬编码：`jsdom`（29.1.1）与 `playwright`（1.61.1）收为 devDependencies，`tools/engine-smoke.mjs` / `tools/live-probe.mjs` 改按包名解析；live-probe 的 Chrome 路径改为 `CHROME_PATH` 环境变量优先，否则按平台取第一个存在的默认位置（Windows 沿用原路径）。`pnpm install` 后 `test:engine` / `probe:live` 开箱即用。
 
 ## [0.1.8] - 2026-08-28
 

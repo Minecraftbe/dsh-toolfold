@@ -51,6 +51,8 @@
     "schemastery": "^3.18.0"
   },
   "devDependencies": {
+    "jsdom": "29.1.1",
+    "playwright": "1.61.1",
     "tsdown": "^0.22.2"
   },
   "license": "MIT"
