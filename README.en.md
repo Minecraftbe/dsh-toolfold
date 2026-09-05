@@ -4,7 +4,7 @@
 
 English | [中文](README.md)
 
-> A DSH Web GUI plugin that provides a **Codex‑like tool folding experience**: consecutive **tool calls** are collapsed into a single compact bar showing only a one‑line summary of the last call. Click to expand/collapse.  
+> A DSH Web GUI plugin that provides a **simple tool call collapsing**: consecutive **tool calls** are collapsed into a single compact bar showing only a one‑line summary of the last call. Click to expand/collapse.  
 > It does not replace any built‑in renderer, and uninstallation restores the UI completely.
 
 ![Demo folding effect](assets/demo-fold.gif)
