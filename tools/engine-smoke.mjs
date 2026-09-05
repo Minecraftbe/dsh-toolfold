@@ -373,6 +373,50 @@ check('grown run merges after the extended collapse',
   [g1, g2, g3, g4, g5].map((t) => t.classList.contains('ccxMerged')).join(','));
 check('no leftover collapse classes', ![g1, g2, g3, g4, g5].some((t) => t.classList.contains('ccxCollapsing')));
 
+// ---- 5c. Answer text arriving in an emptied think-only row resurrects it. ----
+// The think settles first; the row holds nothing but it, so the engine hides
+// the whole row (ccxEmpty). The answer then streams into the SAME row as a
+// single appended text node. It must un-hide the row instead of streaming
+// invisibly into display:none — the "blank hole where the think was".
+const flowR = document.createElement('div');
+flowR.setAttribute('data-chat-flow', '');
+document.body.appendChild(flowR);
+const rr = makeRow('assistant-step', 'k-resurrect');
+const rThink = document.createElement('div');
+rThink.setAttribute('data-variant', 'think');
+rThink.setAttribute('data-state', 'ok');
+rThink.textContent = 'settled reasoning';
+const rBody = document.createElement('div');
+rr.append(rThink, rBody);
+flowR.appendChild(rr);
+await nextFrame(window); // discover the new flow
+await nextFrame(window); // pass
+await nextTick();
+check('think-only row hidden once the think settles', rr.classList.contains('ccxEmpty'));
+rBody.appendChild(document.createTextNode('The streamed answer starts here.'));
+await nextFrame(window); // fast path classifies the add -> rows pass
+await nextFrame(window);
+await nextTick();
+check('answer text un-hides the emptied row (no blank hole)',
+  !rr.classList.contains('ccxEmpty'),
+  'ccxEmpty=' + rr.classList.contains('ccxEmpty'));
+// Text still landing inside the hidden think must NOT resurrect the row.
+const rr2 = makeRow('assistant-step', 'k-resurrect-2');
+const th2 = document.createElement('div');
+th2.setAttribute('data-variant', 'think');
+th2.setAttribute('data-state', 'ok');
+rr2.appendChild(th2);
+flowR.appendChild(rr2);
+await nextFrame(window); // pass empties rr2
+await nextFrame(window);
+await nextTick();
+check('second think-only row hidden', rr2.classList.contains('ccxEmpty'));
+th2.appendChild(document.createTextNode('tail tokens after settle'));
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('think-internal tail tokens do not resurrect the row', rr2.classList.contains('ccxEmpty'));
+
 // ---- 6. Dispose restores the DOM. ----
 disposers[0]();
 check('bars removed on dispose', flow.querySelector('.ccxBar') === null);
