@@ -25,7 +25,11 @@ var engineCss = [
   // down by the gap. The engine JS adds ccxWrapGone to that wrapper in
   // lockstep with hiding the think root.
   '[data-chat-flow] .ccxWrapGone{display:none}',
-  '[data-chat-flow] .ccxBar{display:flex;align-items:center;gap:8px;box-sizing:border-box;width:100%;padding:3px 0;color:var(--dsw-alias-label-secondary);font-family:inherit;font-size:13px;line-height:20px;cursor:pointer;text-align:left}',
+  // The bar is chromeless, so any transparent vertical padding would read
+  // as inter-row whitespace (+3px per bar side vs official rows, which
+  // carry zero padding). Keep padding:0 so folded bars sit on the exact
+  // same 16px flow rhythm / 27px ink-to-ink rhythm as product rows.
+  '[data-chat-flow] .ccxBar{display:flex;align-items:center;gap:8px;box-sizing:border-box;width:100%;padding:0;color:var(--dsw-alias-label-secondary);font-family:inherit;font-size:13px;line-height:20px;cursor:pointer;text-align:left}',
   '[data-chat-flow] .ccxBar:focus-visible{outline:2px solid var(--dsw-static-deepseek-500,#4d6bfe);outline-offset:1px}',
   '.ccxBarCall{flex:1 1 auto;min-width:0;display:flex;align-items:center;pointer-events:none;max-width:1400px;overflow:hidden;transition:max-width var(--ccx-dur,260ms) ease,opacity calc(var(--ccx-dur,260ms)*0.77) ease}',
   '[data-chat-flow] .ccxBar.ccxExpanded .ccxBarCall{max-width:0;opacity:0}',

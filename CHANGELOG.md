@@ -4,6 +4,9 @@
 
 ## [Unreleased]
 
+### Fixed
+- 折叠条与官方行距对齐：`.ccxBar` 去掉上下 `3px` 透明内边距（`padding:0`）。条是无边框无背景元素，透明 padding 会被读成行间白边——实测每侧多出 3px（条↔行 30px、条↔条 33px，而官方行↔行字墨边距 27px = 流 `margin-top:16px` + 24px 行盒内字墨各 ~5.5px）。官方行本身零内边距，去掉后折叠条回到同一节奏。（`src/client/styles.js` → 构建产物）
+
 ### Changed
 - 浏览器半源码模块化：`lib/client.js`（约 2244 行单文件）与字符串手术生成的 `lib/dynamic-body.js` 重构为 `src/client/` 下的模块源（`settings` / `bridge` / `styles` / `engine` / `card` / `react-env` / `index`），由 tsdown 构建为两个产物（`tsdown.config.mjs`）：
   - `lib/client.js(.map)` —— 安装通道 loader 产物（`window.__ModuleLoader__.load`，经 `exports["./client"]` 加载），行为与旧文件一致；
