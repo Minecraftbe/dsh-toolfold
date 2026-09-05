@@ -170,7 +170,7 @@ check('write went through the host route (POST with field)',
 check('optimistic local update applied immediately', store.getSnapshot().durMs === 700);
 check('host write response adopted', store.getSnapshot().durMs === 700 && store.getSnapshot().keepThink === true);
 // Restore defaults so the timing-sensitive collapse checks below stay valid.
-store.update({ durMs: 240, keepThink: false });
+store.update({ durMs: 240, thinkAuto: false, keepThink: false });
 
 // ---- 1c. keepThink on → think row stays visible between the two bars. ----
 store.update({ keepThink: true });
@@ -185,6 +185,19 @@ await nextFrame(window);
 await nextFrame(window);
 await nextTick();
 check('keepThink off hides the think row again', thinkRow.classList.contains('ccxEmpty'));
+// Back on the DEFAULT auto rule (this flow has no official turn-process chip,
+// so auto hides thinking — even while keepThink is on).
+store.update({ thinkAuto: true, keepThink: true });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('auto rule hides thinking even with keepThink on (no official chip)',
+  thinkRow.classList.contains('ccxEmpty'));
+store.update({ thinkAuto: true, keepThink: false });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('auto rule baseline stays hidden', thinkRow.classList.contains('ccxEmpty'));
 
 // ---- 1d. splitThink off → the original merge: one bar across the think. ----
 store.update({ splitThink: false });
@@ -479,8 +492,9 @@ await nextFrame(window); // attribute flip \u2192 think reason
 await nextFrame(window);
 await nextTick();
 check('newly settled think hides its wrapper too', runWrap.classList.contains('ccxWrapGone'));
-// keepThink on must bring the wrapper back (think visible again).
-store.update({ keepThink: true });
+// Manual keepThink semantics (自动跟随 off): keepThink on must bring the
+// wrapper back (think visible again).
+store.update({ thinkAuto: false, keepThink: true });
 await nextFrame(window);
 await nextFrame(window);
 await nextTick();
@@ -488,11 +502,103 @@ check('keepThink on restores the hidden think wrapper',
   !thinkWrap.classList.contains('ccxWrapGone') && !runWrap.classList.contains('ccxWrapGone'),
   'thinkWrapGone=' + thinkWrap.classList.contains('ccxWrapGone')
     + ', runWrapGone=' + runWrap.classList.contains('ccxWrapGone'));
-store.update({ keepThink: false });
+store.update({ thinkAuto: false, keepThink: false });
 await nextFrame(window);
 await nextFrame(window);
 await nextTick();
 check('keepThink off hides the think wrapper again', thinkWrap.classList.contains('ccxWrapGone'));
+
+// ---- 5e. 思考自动跟随官方折叠 (DSH Compact transcript). ----
+// With the product's official turn-process fold active in a flow, auto mode
+// preserves settled thinking; once the official markers disappear (the view
+// is back to Normal), auto falls back to hiding settled thinking again.
+store.update({ thinkAuto: true, keepThink: false });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+const flowO = document.createElement('div');
+flowO.setAttribute('data-chat-flow', '');
+document.body.appendChild(flowO);
+const oChip = makeRow('turn-process', 'k-chip-o');
+oChip.textContent = '3 次工具调用 · 2 条消息'; // foldable chip label
+const oThinkRow = makeRow('assistant-step', 'k-othink');
+const oThink = document.createElement('div');
+oThink.setAttribute('data-variant', 'think');
+oThink.setAttribute('data-state', 'ok');
+oThink.textContent = 'settled reasoning under the official chip';
+oThinkRow.appendChild(oThink);
+oThinkRow.setAttribute('data-turn-process-member', '');
+const oAnswer = makeRow('assistant-step', 'k-oanswer');
+oAnswer.textContent = 'the final answer';
+flowO.append(oChip, oThinkRow, oAnswer);
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('auto + official chip keeps settled thinking visible',
+  !oThinkRow.classList.contains('ccxEmpty'),
+  'ccxEmpty=' + oThinkRow.classList.contains('ccxEmpty'));
+// Back to Normal: the product removes the member marker and empties the chip
+// (one commit); auto must hide the settled thinking again.
+oThinkRow.removeAttribute('data-turn-process-member');
+oChip.textContent = '';
+await nextFrame(window); // attribute flip -> rows pass (chip emptied same commit)
+await nextFrame(window);
+await nextTick();
+check('auto without the official fold hides settled thinking again',
+  oThinkRow.classList.contains('ccxEmpty'),
+  'ccxEmpty=' + oThinkRow.classList.contains('ccxEmpty'));
+
+// ---- 5f. Rows the product itself hides (Compact closed) must not leak
+// orphaned fold bars "outside" the official fold. ----
+const flowP = document.createElement('div');
+flowP.setAttribute('data-chat-flow', '');
+document.body.appendChild(flowP);
+const pChip = makeRow('turn-process', 'k-chip-p');
+pChip.textContent = '2 次工具调用 · 已思考';
+const p1 = makeRow('tool-call', 'p1');
+const p2 = makeRow('tool-call', 'p2');
+for (const [t, name] of [[p1, 'p-read'], [p2, 'p-write']]) {
+  const disc = document.createElement('div');
+  disc.setAttribute('data-disclosure-row', '');
+  disc.textContent = name + ' \u2014 initial';
+  t.appendChild(disc);
+}
+// Product collapsed the turn: the member rows carry hidden="until-found".
+p1.setAttribute('hidden', 'until-found');
+p2.setAttribute('hidden', 'until-found');
+p1.setAttribute('data-turn-process-member', '');
+p2.setAttribute('data-turn-process-member', '');
+const pAnswer = makeRow('assistant-step', 'k-panswer');
+pAnswer.textContent = 'final answer';
+flowP.append(pChip, p1, p2, pAnswer);
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('no bar is created for rows the product already hides',
+  flowP.querySelector('.ccxBar') === null,
+  'bars=' + flowP.querySelectorAll('.ccxBar').length);
+check('hidden member rows keep no merge markers',
+  !p1.classList.contains('ccxMerged') && !p2.classList.contains('ccxMerged'));
+// User expands the official fold: the product removes hidden (rows reveal);
+// the engine must fold the two calls into its own bar again.
+p1.removeAttribute('hidden');
+p2.removeAttribute('hidden');
+await nextFrame(window); // attribute flip -> rows pass
+await nextFrame(window);
+await nextTick();
+const pbar = flowP.querySelector('.ccxBar');
+check('revealed rows fold into the plugin bar again', pbar !== null);
+check('revealed rows hidden under the bar',
+  p1.classList.contains('ccxMerged') && p2.classList.contains('ccxMerged'));
+// Collapsing the official fold again removes the bar (nothing left over).
+p1.setAttribute('hidden', 'until-found');
+p2.setAttribute('hidden', 'until-found');
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('re-collapsing removes the plugin bar (no leak outside the fold)',
+  flowP.querySelector('.ccxBar') === null,
+  'bars=' + flowP.querySelectorAll('.ccxBar').length);
 
 // ---- 5d. Master switch: disabling removes every fold, enabling restores. ----
 store.update({ enabled: false });
