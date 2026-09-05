@@ -427,6 +427,73 @@ await nextFrame(window);
 await nextTick();
 check('think-internal tail tokens do not resurrect the row', rr2.classList.contains('ccxEmpty'));
 
+// ---- 5ca. Hidden think WRAPPER collapses with the think root. ----
+// The product's assistant body is a gap:16px flex column whose items are the
+// think wrapper and the answer block. Hiding only the think root would leave
+// the wrapper as a 0-height flex item that still pins the answer 16px below
+// the row top (the "blank band under the folded think"): the engine must
+// hide the wrapper in lockstep, and restore it while the think stays visible.
+const flowW = document.createElement('div');
+flowW.setAttribute('data-chat-flow', '');
+document.body.appendChild(flowW);
+const wrapRow = makeRow('assistant-step', 'k-wrap');
+const thinkWrap = document.createElement('div');
+const wrapThink = document.createElement('div');
+wrapThink.setAttribute('data-variant', 'think');
+wrapThink.setAttribute('data-state', 'ok');
+wrapThink.textContent = 'settled reasoning that must fully collapse';
+const wrapBody = document.createElement('div');
+wrapBody.textContent = 'The answer that must sit at the row top.';
+// Mimic the product: think nested in a wrapper, answer as its sibling.
+thinkWrap.appendChild(wrapThink);
+wrapRow.append(thinkWrap, wrapBody);
+flowW.appendChild(wrapRow);
+await nextFrame(window); // discover the new flow
+await nextFrame(window); // pass
+await nextTick();
+check('settled-think row with prose stays visible', !wrapRow.classList.contains('ccxEmpty'));
+check('hidden think wrapper gets ccxWrapGone',
+  thinkWrap.classList.contains('ccxWrapGone'),
+  'wrapGone=' + thinkWrap.classList.contains('ccxWrapGone'));
+// Streaming think (state running) must keep its wrapper visible.
+const flowW2 = document.createElement('div');
+flowW2.setAttribute('data-chat-flow', '');
+document.body.appendChild(flowW2);
+const runRow = makeRow('assistant-step', 'k-wrap-running');
+const runWrap = document.createElement('div');
+const runThink = document.createElement('div');
+runThink.setAttribute('data-variant', 'think');
+runThink.setAttribute('data-state', 'running');
+runThink.textContent = 'thinking\u2026';
+const runBody = document.createElement('div');
+runBody.textContent = 'answer placeholder';
+runWrap.appendChild(runThink);
+runRow.append(runWrap, runBody);
+flowW2.appendChild(runRow);
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('running think keeps its wrapper visible', !runWrap.classList.contains('ccxWrapGone'));
+runThink.setAttribute('data-state', 'ok'); // settles now
+await nextFrame(window); // attribute flip \u2192 think reason
+await nextFrame(window);
+await nextTick();
+check('newly settled think hides its wrapper too', runWrap.classList.contains('ccxWrapGone'));
+// keepThink on must bring the wrapper back (think visible again).
+store.update({ keepThink: true });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('keepThink on restores the hidden think wrapper',
+  !thinkWrap.classList.contains('ccxWrapGone') && !runWrap.classList.contains('ccxWrapGone'),
+  'thinkWrapGone=' + thinkWrap.classList.contains('ccxWrapGone')
+    + ', runWrapGone=' + runWrap.classList.contains('ccxWrapGone'));
+store.update({ keepThink: false });
+await nextFrame(window);
+await nextFrame(window);
+await nextTick();
+check('keepThink off hides the think wrapper again', thinkWrap.classList.contains('ccxWrapGone'));
+
 // ---- 5d. Master switch: disabling removes every fold, enabling restores. ----
 store.update({ enabled: false });
 await nextFrame(window); // store listener disposes the engine synchronously
