@@ -1,21 +1,34 @@
 # Changelog
 
-所有显著变更将记录于此。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
+所有显著变更将记录于此。版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
-## [Unreleased]
+## [0.1.9] - 2026-09-05
 
-### Fixed
-- 折叠条与官方行距对齐：`.ccxBar` 去掉上下 `3px` 透明内边距（`padding:0`）。条是无边框无背景元素，透明 padding 会被读成行间白边——实测每侧多出 3px（条↔行 30px、条↔条 33px，而官方行↔行字墨边距 27px = 流 `margin-top:16px` + 24px 行盒内字墨各 ~5.5px）。官方行本身零内边距，去掉后折叠条回到同一节奏。（`src/client/styles.js` → 构建产物）
+> ⚠️ **版本支持**：本节改动将随 `0.1.9` 发布；自 `0.1.9` 起，本插件仅支持 DSH `>= 0.1.2-rc.1` 且 `< 0.1.3`（安装节有同样提示）。
 
-### Changed
-- 浏览器半源码模块化：`lib/client.js`（约 2244 行单文件）与字符串手术生成的 `lib/dynamic-body.js` 重构为 `src/client/` 下的模块源（`settings` / `bridge` / `styles` / `engine` / `card` / `react-env` / `index`），由 tsdown 构建为两个产物（`tsdown.config.mjs`）：
+### 缺陷修复
+- **折叠条行距对齐官方**：`.ccxBar` 去掉上下 `3px` 透明内边距（`padding:0`）。条是无边框无背景元素，透明 padding 会被读成行间白边——实测每侧多出 3px（条↔行 30px、条↔条 33px，而官方行↔行字墨边距 27px = 流 `margin-top:16px` + 24px 行盒内字墨各 ~5.5px）。官方行本身零内边距，去掉后折叠条回到同一节奏。
+- **思考行复活**：答案流进曾被清空隐藏的思考行时自动恢复可见，不再误判为空行。
+- **关引擎保留卡片样式**：引擎规则与卡片 chrome 拆成两个 style 标签，停用折叠不再剥掉卡片外观。
+- **压掉 16px 空带**：隐藏思考的 wrapper 一并折叠，回答上方不再留空。
+
+### 功能变更
+- **思考显示三档下拉**（自动跟随官方折叠 / 始终保留 / 始终隐藏，默认自动）：原来自动开着时保留是个摆设，现在没有无效组合；老配置自动沿用，可回滚。设置卡与 README 已同步。
+- **总开关**：一键停用/恢复全部折叠（关闭后聊天回到产品默认显示，卡片常驻随时可重开）。
+- **跟随官方 Compact 折叠**：官方收起整块过程时思考自动保留可见（即下拉的默认档）。
+- **版本不匹配警告**：运行的 DSH 超出支持范围时，设置卡显示 ⚠ 图标（hover 看详情）并打一条一次性 console 警告。
+- **适配 DSH 0.1.2**：`settingsNamespace()` helper 被移除，改用裸字符串命名空间；新增 `engines.dsh` 下限，删除 `dsh-settings` peer 依赖。
+
+### 工程变更
+- **浏览器半模块化**：`lib/client.js`（约 2244 行单文件）与字符串手术生成的 `lib/dynamic-body.js` 重构为 `src/client/` 下的模块源（`settings` / `bridge` / `styles` / `engine` / `card` / `react-env` / `index`），由 tsdown 构建（`tsdown.config.mjs`，与 host 半共三个 entry）：
   - `lib/client.js(.map)` —— 安装通道 loader 产物（`window.__ModuleLoader__.load`，经 `exports["./client"]` 加载），行为与旧文件一致；
   - `lib/dynamic-body.js(.map)` —— 动态通道 body（同一模块图去掉 loader 包装），供动态插件会话与 `tools/live-probe.mjs` 使用；
   - React 不再静态导入：构建 wrapper 将通道提供的 React 种入 `globalThis.__dshToolfoldReact`（安装通道 `require('react')` / 动态通道闭包参数 `React`），无 React 的无头环境仅跳过设置卡片注册。
-- 删除 `lib/build-dynamic.cjs`（字符串手术生成器）。浏览器产物改为**构建期生成、不入库**：`lib/client.js` / `lib/dynamic-body.js`（及 `.map`）已 gitignore，由 `prepare: pnpm build`（tsdown）重建——`pnpm publish` 与 git-hosted 安装都会先跑 prepare 再打包，`files` 白名单只含构建产物（`lib/index.js`、`lib/client.js`，不含 src / map）。`package.json` 增加 `prepare` / `build` / `build:watch` 脚本与 `tsdown` devDependency。改动流程：只改 `src/` → `pnpm build` → 验证。
-- host 半源码 `lib/index.js` 搬家为 `src/host/index.js`（与 `src/client/` 对称；ESM，无需 scoped package.json），由 tsdown 第三个 entry（`platform: 'node'`，`schemastery` 保持 external）构建回 `lib/index.js`——`main` / `exports["."]` / `files` 指向不变。至此 `lib/` 下 100% 生成物，`.gitignore` 收成一行 `lib/`（源码层/产物层不再混放）。
-- 自带工具去本机硬编码：`jsdom`（29.1.1）与 `playwright`（1.61.1）收为 devDependencies，`tools/engine-smoke.mjs` / `tools/live-probe.mjs` 改按包名解析；live-probe 的 Chrome 路径改为 `CHROME_PATH` 环境变量优先，否则按平台取第一个存在的默认位置（Windows 沿用原路径）。`pnpm install` 后 `test:engine` / `probe:live` 开箱即用。
-- 思考显隐两开关合并为「思考显示」三档下拉（`thinkMode: auto/keep/hide`，默认 `auto`）：`thinkAuto` 开启时 `keepThink` 是死控件，hint 还得专门解释生效条件；合并后无死状态。`thinkAuto` / `keepThink` 保留为 deprecated 别名继续校验，老配置（settings.yaml / localStorage）自动推导迁移且可回滚；卡片、README 设置说明同步更新。
+- **构建期产物**（删除旧生成器 `lib/build-dynamic.cjs`）：`lib/client.js` / `lib/dynamic-body.js`（及 `.map`）已 gitignore，由 `prepare: pnpm build`（tsdown）重建——`pnpm publish` 与 git-hosted 安装都会先跑 prepare 再打包，`files` 白名单只含构建产物（`lib/index.js`、`lib/client.js`，不含 src / map）。`package.json` 增加 `prepare` / `build` / `build:watch` 脚本与 `tsdown` devDependency。改动流程：只改 `src/` → `pnpm build` → 验证。
+- **host 半搬家**：`lib/index.js` → `src/host/index.js`（与 `src/client/` 对称；ESM，无需 scoped package.json），由 tsdown 第三个 entry（`platform: 'node'`，`schemastery` 保持 external）构建回 `lib/index.js`——`main` / `exports["."]` / `files` 指向不变。至此 `lib/` 下 100% 生成物，`.gitignore` 收成一行 `lib/`（源码层/产物层不再混放）。
+- **工具去本机硬编码**：`jsdom`（29.1.1）与 `playwright`（1.61.1）收为 devDependencies，`tools/engine-smoke.mjs` / `tools/live-probe.mjs` 改按包名解析；live-probe 的 Chrome 路径改为 `CHROME_PATH` 环境变量优先，否则按平台取第一个存在的默认位置。`pnpm install` 后 `test:engine` / `probe:live` 开箱即用。
+- **新增 `pnpm-lock.yaml`**：安装可重复。
+- **发布管线**：Publish 前加 `pnpm install`；dry-run 校验 + `--provenance` OIDC 可信发布；发布条件收窄为仅 release 触发（取消手动发布）；`engines.dsh` 上限收窄到 `<0.1.3`。
 
 ## [0.1.8] - 2026-08-28
 
@@ -79,6 +92,7 @@
 - 首个可用版本：连续 `tool-call` 折叠为最后一条的单行摘要 + “已折叠 N 个工具调用”，支持 `durMs / keepThink / splitThink / stats` 四项设置（DSH `settings` 服务 → `~/.dsh/settings.yaml`，回退到 Host 路由与 `localStorage`）与瀑布动画。
 - `toolfold` 远端包与一键安装、设置双半通信（Host `GET/POST /api/dsh-toolfold/settings` + Client 桥）。
 
+[0.1.9]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.8...v0.1.9
 [0.1.8]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.7...v0.1.8
 [0.1.7]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.6...v0.1.7
 [0.1.6]: https://github.com/Minecraftbe/dsh-toolfold/compare/v0.1.5...v0.1.6
