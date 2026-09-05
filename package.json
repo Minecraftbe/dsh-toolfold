@@ -27,7 +27,8 @@
     }
   },
   "files": [
-    "lib",
+    "lib/index.js",
+    "lib/client.js",
     "cordis.patch.yml",
     "scripts",
     "README.md",
@@ -35,6 +36,9 @@
     "CHANGELOG.md"
   ],
   "scripts": {
+    "prepare": "pnpm build",
+    "build": "tsdown",
+    "build:watch": "tsdown --watch",
     "test:engine": "node tools/engine-smoke.mjs",
     "probe:live": "node tools/live-probe.mjs",
     "install:dsh": "node scripts/install-dsh.cjs",
@@ -45,6 +49,9 @@
   },
   "peerDependencies": {
     "schemastery": "^3.18.0"
+  },
+  "devDependencies": {
+    "tsdown": "^0.22.2"
   },
   "license": "MIT"
 }

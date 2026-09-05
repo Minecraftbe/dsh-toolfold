@@ -30,6 +30,13 @@ jobs:
           registry-url: https://registry.npmjs.org/
           package-manager-cache: false
 
+      # Installs devDependencies (tsdown). `prepare: pnpm build` runs during
+      # install AND again during pnpm publish, so lib/client.js(+map) and
+      # lib/dynamic-body.js(+map) are always freshly built from src/client/
+      # before the tarball is packed — the committed tree never carries them.
+      - name: Install
+        run: pnpm install
+
       - name: Dry-run
         if: github.event.inputs.dry_run == 'true'
         run: pnpm publish --dry-run --access public --no-git-checks

@@ -2,6 +2,15 @@
 
 所有显著变更将记录于此。格式基于 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/)，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### Changed
+- 浏览器半源码模块化：`lib/client.js`（约 2244 行单文件）与字符串手术生成的 `lib/dynamic-body.js` 重构为 `src/client/` 下的模块源（`settings` / `bridge` / `styles` / `engine` / `card` / `react-env` / `index`），由 tsdown 构建为两个产物（`tsdown.config.mjs`）：
+  - `lib/client.js(.map)` —— 安装通道 loader 产物（`window.__ModuleLoader__.load`，经 `exports["./client"]` 加载），行为与旧文件一致；
+  - `lib/dynamic-body.js(.map)` —— 动态通道 body（同一模块图去掉 loader 包装），供动态插件会话与 `tools/live-probe.mjs` 使用；
+  - React 不再静态导入：构建 wrapper 将通道提供的 React 种入 `globalThis.__dshToolfoldReact`（安装通道 `require('react')` / 动态通道闭包参数 `React`），无 React 的无头环境仅跳过设置卡片注册。
+- 删除 `lib/build-dynamic.cjs`（字符串手术生成器）。浏览器产物改为**构建期生成、不入库**：`lib/client.js` / `lib/dynamic-body.js`（及 `.map`）已 gitignore，由 `prepare: pnpm build`（tsdown）重建——`pnpm publish` 与 git-hosted 安装都会先跑 prepare 再打包，`files` 白名单只含构建产物（`lib/index.js`、`lib/client.js`，不含 src / map）。`package.json` 增加 `prepare` / `build` / `build:watch` 脚本与 `tsdown` devDependency。改动流程：只改 `src/client/` → `pnpm build` → 验证。
+
 ## [0.1.8] - 2026-08-28
 
 ### Fixed

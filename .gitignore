@@ -1,6 +1,13 @@
 # dependencies / 依赖
 node_modules/
 
+# generated browser client artifacts — `prepare: pnpm build` recreates them
+# (npm publish and git-hosted installs both run prepare before packing)
+lib/client.js
+lib/client.js.map
+lib/dynamic-body.js
+lib/dynamic-body.js.map
+
 # logs
 *.log
 
