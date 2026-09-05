@@ -124,6 +124,8 @@ const engineStyleTag = document.querySelector('style[data-plugin-css="dsh-toolfo
 check('card chrome style tag mounted at boot', cardStyleTag !== null);
 check('card chrome tag carries the .ccxCard rules',
   cardStyleTag !== null && cardStyleTag.textContent.includes('.ccxCard{'));
+check('card chrome carries the .ccxWarn mismatch rules',
+  cardStyleTag !== null && cardStyleTag.textContent.includes('.ccxWarn'));
 check('engine style tag mounted at boot', engineStyleTag !== null);
 
 // ---- 1. Initial folding. ----
@@ -169,6 +171,34 @@ check('write went through the host route (POST with field)',
   bridgeCalls.some((c) => c.init !== undefined && c.init.method === 'POST' && c.init.body.indexOf('"durMs"') !== -1));
 check('optimistic local update applied immediately', store.getSnapshot().durMs === 700);
 check('host write response adopted', store.getSnapshot().durMs === 700 && store.getSnapshot().keepThink === true);
+
+// ---- 1b2. DSH version-mismatch reporting (the route's `dsh` field). ----
+check('compat unknown before the first host report', bridge.compat().state === 'unknown');
+const consoleWarns = [];
+window.console.warn = (message) => { consoleWarns.push(String(message)); };
+const fakeRoute = (dshInfo) => (url, init) => {
+  const method = init === undefined ? 'GET' : init.method;
+  const value = { durMs: 500, keepThink: true, splitThink: true, stats: false };
+  const body = { ok: true, value: { value, revision: 5, writable: true } };
+  if (dshInfo !== undefined) body.dsh = dshInfo;
+  return Promise.resolve({ ok: true, json: () => Promise.resolve(body) });
+};
+window.fetch = fakeRoute({ version: '0.1.1-rc.1', state: 'old' });
+await bridge.load();
+check('old host report flips compat to old',
+  bridge.compat().state === 'old' && bridge.compat().version === '0.1.1-rc.1',
+  JSON.stringify(bridge.compat()));
+window.fetch = fakeRoute({ version: '0.1.1-rc.1', state: 'old' });
+await bridge.load();
+check('mismatch console warning fires exactly once', consoleWarns.length === 1, 'warns=' + consoleWarns.length);
+window.fetch = fakeRoute({ version: '0.2.0', state: 'new' });
+await bridge.load();
+check('newer host flips compat to new without a second warning',
+  bridge.compat().state === 'new' && consoleWarns.length === 1,
+  JSON.stringify(bridge.compat()));
+window.fetch = fakeRoute({ version: '0.1.2-rc.1', state: 'ok' });
+await bridge.load();
+check('in-range report clears the mismatch state', bridge.compat().state === 'ok' && consoleWarns.length === 1);
 // Restore defaults so the timing-sensitive collapse checks below stay valid.
 store.update({ durMs: 240, thinkAuto: false, keepThink: false });
 
