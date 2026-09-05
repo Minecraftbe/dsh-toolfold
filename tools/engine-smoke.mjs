@@ -417,6 +417,25 @@ await nextFrame(window);
 await nextTick();
 check('think-internal tail tokens do not resurrect the row', rr2.classList.contains('ccxEmpty'));
 
+// ---- 5d. Master switch: disabling removes every fold, enabling restores. ----
+store.update({ enabled: false });
+await nextFrame(window); // store listener disposes the engine synchronously
+await nextFrame(window);
+await nextTick();
+check('disabling removes the bars', flow.querySelector('.ccxBar') === null);
+check('disabling removes injected classes',
+  [t1, t2, t3, t4, thinkRow].every((t) => !t.classList.contains('ccxMerged') && !t.classList.contains('ccxEmpty')));
+check('disabling removes the style tag',
+  document.querySelector('style[data-plugin-css="dsh-toolfold/style"]') === null);
+store.update({ enabled: true });
+await nextFrame(window); // re-install + boot init
+await nextFrame(window); // first pass
+await nextFrame(window);
+await nextTick();
+check('re-enabling refolds both runs', flow.querySelectorAll('.ccxBar').length === 2,
+  'bars=' + flow.querySelectorAll('.ccxBar').length);
+check('re-enabling hides the think row again', thinkRow.classList.contains('ccxEmpty'));
+
 // ---- 6. Dispose restores the DOM. ----
 disposers[0]();
 check('bars removed on dispose', flow.querySelector('.ccxBar') === null);
