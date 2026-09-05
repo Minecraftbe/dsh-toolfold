@@ -116,6 +116,16 @@ await nextTick();
 const store = window.__toolfoldSettings;
 check('settings store exposed', store !== undefined && typeof store.update === 'function');
 
+// The settings card's chrome must live in its OWN style tag (plugin-life),
+// separate from the engine's folding tag — disabling the engine must never
+// strip the always-mounted card's styles.
+const cardStyleTag = document.querySelector('style[data-plugin-css="dsh-toolfold/card"]');
+const engineStyleTag = document.querySelector('style[data-plugin-css="dsh-toolfold/style"]');
+check('card chrome style tag mounted at boot', cardStyleTag !== null);
+check('card chrome tag carries the .ccxCard rules',
+  cardStyleTag !== null && cardStyleTag.textContent.includes('.ccxCard{'));
+check('engine style tag mounted at boot', engineStyleTag !== null);
+
 // ---- 1. Initial folding. ----
 const bars = flow.querySelectorAll('.ccxBar');
 let bar = bars[0];
@@ -427,6 +437,8 @@ check('disabling removes injected classes',
   [t1, t2, t3, t4, thinkRow].every((t) => !t.classList.contains('ccxMerged') && !t.classList.contains('ccxEmpty')));
 check('disabling removes the style tag',
   document.querySelector('style[data-plugin-css="dsh-toolfold/style"]') === null);
+check('card chrome style tag survives disabling',
+  document.querySelector('style[data-plugin-css="dsh-toolfold/card"]') !== null);
 store.update({ enabled: true });
 await nextFrame(window); // re-install + boot init
 await nextFrame(window); // first pass
@@ -435,6 +447,10 @@ await nextTick();
 check('re-enabling refolds both runs', flow.querySelectorAll('.ccxBar').length === 2,
   'bars=' + flow.querySelectorAll('.ccxBar').length);
 check('re-enabling hides the think row again', thinkRow.classList.contains('ccxEmpty'));
+check('re-enabling restores the engine style tag',
+  document.querySelector('style[data-plugin-css="dsh-toolfold/style"]') !== null);
+check('card chrome style tag still mounted after re-enable',
+  document.querySelector('style[data-plugin-css="dsh-toolfold/card"]') !== null);
 
 // ---- 6. Dispose restores the DOM. ----
 disposers[0]();
