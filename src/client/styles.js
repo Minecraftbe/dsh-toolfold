@@ -58,7 +58,7 @@ var cardCss = [
   '.ccxHeadText{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}',
   '.ccxName{font-size:15px;font-weight:600;line-height:1.4;color:var(--dsw-alias-label-primary,#222)}',
   '.ccxDescription{font-size:13px;line-height:1.5;color:var(--dsw-alias-label-tertiary,#888)}',
-  '.ccxChevron{flex:none;font-size:14px;line-height:1;color:var(--dsw-alias-label-tertiary,#888);transition:transform .16s}',
+  '.ccxChevron{flex:none;color:var(--dsw-alias-label-tertiary,#888);transition:transform .16s}',
   '.ccxChevronOpen{transform:rotate(180deg)}',
   '.ccxBody{border-top:1px solid var(--dsw-alias-border-l2,#e4e4e7);margin:0 16px;padding:4px 0 8px}',
   '.ccxField{display:flex;flex-direction:column;gap:6px;padding:12px 0}',

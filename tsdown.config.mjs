@@ -68,6 +68,11 @@ const base = {
   dts: false,
   sourcemap: true,
   clean: false, // three entries share one outDir — never let one wipe the others
+  // Product UI primitives stay external (a RUNTIME surface, not a build
+  // dependency): the web shell's module table answers this specifier in
+  // the loader channel, and primitives.js falls back to an inline SVG
+  // everywhere else. Same neverBundle mechanism as schemastery on host.
+  deps: { neverBundle: ['@deepseek-ai/dsh-client-ui-primitives'] },
 };
 
 // The entry assigns module.exports = plugin directly; keep that shape (no

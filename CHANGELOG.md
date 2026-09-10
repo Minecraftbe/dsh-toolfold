@@ -7,6 +7,7 @@
 ### 缺陷修复
 - **版本校验不再硬编码**：`package.json engines.dsh` 成为唯一真相源——构建时经 tsdown `define` 烙进 `lib/index.js`（`__DSH_ENGINES__`），运行时零文件探测、产物自包含；通用匹配器（`||` / `>=` / `<` / `=`，含 `>=` 后空格容忍与 npm semver 的 prerelease 门控）判定运行中 DSH 的 `ok / old / new / unknown`。之前 host 里写死的单区间 `>=0.1.2-rc.1 <0.1.3` 让 `0.1.5-rc.1` 误报感叹号，今后加区间只改 `package.json` 一处 + 重新构建。判定逻辑抽为零依赖的 `src/host/version.js`（`parseVersion / compareParsed / parseEnginesRange / satisfiesEngines / compatFor`），配 `tools/version-smoke.mjs` 矩阵测试（含 `0.1.5-rc.1 → ok` 回归项、`||` 缝隙、`0.1.3-rc.1` 门控项与产物 wiring 检查）。
 - **警告文案跟 live 区间走**：host 把区间原文经路由 `dsh.range` 下发，console 警告与设置卡 hover 提示直接引用，client 不再硬编码区间。
+- **设置卡箭头换成官方图标**：header 的 `▾` 文字段落（字体相关、比官方粗）换成产品自己的 `IconChevronDownOutline14`——经 shell 模块表 `require('@deepseek-ai/dsh-client-ui-primitives')` 实时拿（构建期 `neverBundle` 保持 external），拿不到的环境（harness、无头测试、旧 DSH）回落到像素一致的内联 SVG。卡片 chrome 其余部分按官方契约本来就归插件自己画（`settings.plugin.item` slot 只负责堆叠），这次只动箭头。
 
 ## [0.1.9] - 2026-09-05
 

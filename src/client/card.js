@@ -1,4 +1,5 @@
 const { acquireReact } = require('./react-env.js');
+const { acquireChevronDown } = require('./primitives.js');
 
 // ------------------------------------------------------------------
 // Settings card: Settings → 插件 → 工具折叠. Rendered with the same
@@ -29,6 +30,10 @@ function SettingsCard(props) {
   }, [state.stats]);
   var cardClass = isOpen ? 'ccxCard ccxCardOpen' : 'ccxCard';
   var compat = props.compat();
+  // The header chevron is the product's own IconChevronDownOutline14 when
+  // the channel provides it, else a pixel-identical inline SVG (see
+  // primitives.js) — never a font-dependent text glyph.
+  var ChevronDown = acquireChevronDown(React);
   var warnEl = null;
   if (compat.state === 'old' || compat.state === 'new') {
     // Quote the live requirement the host judged against (it rides the
@@ -54,7 +59,7 @@ function SettingsCard(props) {
       React.createElement('span', { className: 'ccxName' }, '工具折叠'),
       React.createElement('span', { className: 'ccxDescription' }, '折叠工具调用与思考的显示设置')),
     warnEl,
-    React.createElement('span', { className: isOpen ? 'ccxChevron ccxChevronOpen' : 'ccxChevron' }, '▾'));
+    React.createElement(ChevronDown, { className: isOpen ? 'ccxChevron ccxChevronOpen' : 'ccxChevron' }));
   if (!isOpen) return React.createElement('li', { className: cardClass }, header);
   var enabledField = React.createElement('div', { className: 'ccxField' },
     React.createElement('div', { className: 'ccxFieldHead' },

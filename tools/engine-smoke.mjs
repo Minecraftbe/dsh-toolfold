@@ -127,6 +127,25 @@ check('card chrome carries the .ccxWarn mismatch rules',
   cardStyleTag !== null && cardStyleTag.textContent.includes('.ccxWarn'));
 check('engine style tag mounted at boot', engineStyleTag !== null);
 
+// The header chevron resolves the product's primitives icon when the
+// channel provides it; the harness provides nothing, so this covers the
+// pixel-identical inline SVG fallback (same artwork either way).
+const primitives = require(join(root, 'src', 'client', 'primitives.js'));
+const stubReact = { createElement: (type, props, ...children) => ({ type, props, children }) };
+const ChevronDown = primitives.acquireChevronDown(stubReact);
+const chevronEl = ChevronDown({ className: 'ccxChevron' });
+check('chevron falls back to an inline SVG without the product package',
+  chevronEl !== null && chevronEl.type === 'svg' && chevronEl.props.viewBox === '0 0 14 14',
+  JSON.stringify(chevronEl && chevronEl.type));
+check('fallback chevron carries the official path data',
+  chevronEl.children.length === 1 && chevronEl.children[0].type === 'path'
+  && chevronEl.children[0].props.fill === 'currentColor'
+  && chevronEl.children[0].props.d === primitives.CHEVRON_DOWN_PATH);
+check('fallback chevron forwards className and defaults to 14px',
+  chevronEl.props.className === 'ccxChevron'
+  && chevronEl.props.width === 14 && chevronEl.props.height === 14
+  && chevronEl.props['aria-hidden'] === true);
+
 // ---- 1. Initial folding. ----
 const bars = flow.querySelectorAll('.ccxBar');
 let bar = bars[0];
