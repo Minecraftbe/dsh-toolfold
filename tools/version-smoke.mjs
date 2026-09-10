@@ -68,3 +68,21 @@ if (failures > 0) {
   process.exit(1)
 }
 console.log('ALL VERSION CHECKS PASSED')
+
+// Build wiring: lib/index.js must carry the live range (stamped by tsdown
+// `define` at build time) and must not probe package.json at runtime.
+let libText = null
+try {
+  libText = readFileSync(new URL('../lib/index.js', import.meta.url), 'utf8')
+} catch {
+  libText = null
+}
+if (libText === null) {
+  console.log('skip - lib/index.js not built; run pnpm build first')
+} else {
+  if (!libText.includes(RANGE) || libText.includes('ownEnginesRange')) {
+    console.error('FAIL - built lib/index.js does not carry the engines range (rebuild?)')
+    process.exit(1)
+  }
+  console.log('ok - built lib/index.js carries the engines range')
+}

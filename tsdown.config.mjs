@@ -50,6 +50,15 @@ const wrapper = [
   'if (typeof globalThis !== "undefined") globalThis.__dshToolfoldReact = __dshSeed;',
 ].join('\n');
 
+// The supported DSH range, baked into the host artifact at build time.
+// Single source of truth: package.json `engines.dsh` — widening support
+// is a one-line package.json edit + rebuild, and the installed lib/ is
+// self-contained (no runtime package.json probing).
+import { readFileSync } from 'node:fs';
+const dshEnginesRange = JSON.parse(
+  readFileSync(new URL('./package.json', import.meta.url), 'utf8'),
+).engines.dsh;
+
 const base = {
   entry: { client: './src/client/index.js' },
   outDir: './lib',
@@ -98,6 +107,9 @@ export default [
     dts: false,
     sourcemap: true,
     clean: false, // shares outDir with the browser entries — never wipe it
+    // Build-time injection of the supported DSH range (see above): the
+    // host source reads __DSH_ENGINES__ as a plain constant.
+    define: { __DSH_ENGINES__: JSON.stringify(dshEnginesRange) },
     // schemastery is a peer dependency: keep the bare import so the host
     // resolves the deployment's own copy (bundling it would shadow the
     // shared schema runtime and bloat the artifact).

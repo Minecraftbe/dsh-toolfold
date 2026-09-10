@@ -3,10 +3,11 @@
  *
  * The single source of truth for the supported DSH product range is this
  * package's own `engines.dsh` field (an npm-style range such as
- * ">=0.1.2-rc.1 <0.1.3 || >=0.1.5-rc.1 <0.1.6"). The host half reads that
- * field at startup (see ownEnginesRange in index.js) and judges the
- * running DSH with the matcher below — no range is hardcoded here, so
- * widening support is a one-line package.json edit.
+ * ">=0.1.2-rc.1 <0.1.3 || >=0.1.5-rc.1 <0.1.6"). The build stamps that
+ * field into the host artifact via tsdown `define` (__DSH_ENGINES__, see
+ * tsdown.config.mjs) and the host half judges the running DSH with the
+ * matcher below — no range is hardcoded anywhere, so widening support is
+ * a one-line package.json edit + rebuild.
  *
  * Supported range grammar (the subset npm engines ranges actually use):
  *   range      := branch ("||" branch)*

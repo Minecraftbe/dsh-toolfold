@@ -32,8 +32,7 @@
 import z from 'schemastery'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { dirname, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { resolve } from 'node:path'
 import { compatFor } from './version.js'
 
 export const name = 'toolfold'
@@ -76,40 +75,15 @@ function resolveThinkMode(section) {
   return 'auto'
 }
 
-// Supported DSH product range: read from this package's own `engines.dsh`
-// at startup — that field is the single source of truth, so widening
-// support is a package.json edit with no code change. DSH itself never
-// validates that field, so this host half reports the running version +
-// state to the settings card. `lib/index.js` lives one level below the
-// package root while `src/host/index.js` lives two levels below it, so
-// both layouts are probed and the hit must belong to `dsh-toolfold`.
-// Cached; null when unreadable (the report then stays 'unknown' — fail
-// silent, never false-alarm).
-let cachedEnginesRange
-function ownEnginesRange() {
-  if (cachedEnginesRange !== undefined) return cachedEnginesRange
-  cachedEnginesRange = null
-  try {
-    const here = dirname(fileURLToPath(import.meta.url))
-    for (const rel of ['../package.json', '../../package.json']) {
-      try {
-        const pkg = JSON.parse(readFileSync(resolve(here, rel), 'utf8'))
-        const range = pkg && pkg.name === 'dsh-toolfold' && pkg.engines !== null && typeof pkg.engines === 'object'
-          ? pkg.engines.dsh
-          : undefined
-        if (typeof range === 'string' && range.trim() !== '') {
-          cachedEnginesRange = range.trim()
-          break
-        }
-      } catch {
-        // Try the next layout.
-      }
-    }
-  } catch {
-    // No module URL (bundled oddly): stay unknown.
-  }
-  return cachedEnginesRange
-}
+// Supported DSH product range, baked in at build time: tsdown `define`
+// stamps package.json `engines.dsh` into __DSH_ENGINES__ (see
+// tsdown.config.mjs), so that field stays the single source of truth and
+// the installed lib/ is self-contained — no runtime package.json probing.
+// The typeof guard only matters when this source runs unbuilt (never in
+// production); then the report stays 'unknown' instead of throwing.
+const ENGINES_RANGE = typeof __DSH_ENGINES__ === 'string' && __DSH_ENGINES__ !== ''
+  ? __DSH_ENGINES__
+  : null
 
 /**
  * The @deepseek-ai/dsh version this process was launched from: process.argv[1]
@@ -144,7 +118,7 @@ function dshVersion() {
  */
 function dshCompat() {
   const version = dshVersion()
-  const range = ownEnginesRange()
+  const range = ENGINES_RANGE
   if (version === null || range === null) return { version, state: 'unknown', range }
   return { version, state: compatFor(version, range), range }
 }
