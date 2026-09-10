@@ -11,11 +11,13 @@
  *                                      expectedRevision? }
  *                                   → { ok, value: { value, revision, writable } }
  *
- * Every success response additionally carries `dsh: { version, state }` — the
- * running DSH product version and its compatibility with the supported range
- * ('ok' | 'old' | 'new' | 'unknown'). DSH does not enforce `engines.dsh`
- * anywhere, so the host half reports the mismatch itself and the settings
- * card warns the user (once-only console warning + hover-tip icon).
+ * Every success response additionally carries `dsh: { version, state, range }` —
+ * the running DSH product version, its compatibility with the supported
+ * range ('ok' | 'old' | 'new' | 'unknown'), and the raw `engines.dsh`
+ * requirement the verdict was judged against. DSH does not enforce
+ * `engines.dsh` anywhere, so the host half reports the mismatch itself
+ * and the settings card warns the user (once-only console warning +
+ * hover-tip icon quoting the live range).
  *
  * The browser half prefers the official `settingsScope` transport when the
  * deployment exposes this namespace, then this route, then browser
@@ -30,7 +32,9 @@
 import z from 'schemastery'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
-import { resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { compatFor } from './version.js'
 
 export const name = 'toolfold'
 export const inject = ['settings', 'webServer']
@@ -72,49 +76,39 @@ function resolveThinkMode(section) {
   return 'auto'
 }
 
-// Supported DSH product range. MUST mirror package.json `engines.dsh`
-// (">=0.1.2-rc.1 <0.1.3"); DSH itself never validates that field, so this
-// host half reports the running version + state to the settings card.
-const DSH_MIN = '0.1.2-rc.1'
-const DSH_MAX = '0.1.3'
-
-/** Parse "v1.2.3-rc.4+build" into comparable parts; null on junk. */
-function parseVersion(value) {
-  const match = /^v?(\d+)\.(\d+)\.(\d+)(?:-([0-9A-Za-z.-]+))?(?:\+[0-9A-Za-z.-]+)?$/.exec(String(value))
-  if (!match) return null
-  return {
-    core: [Number(match[1]), Number(match[2]), Number(match[3])],
-    pre: match[4] === undefined ? null : match[4].split('.'),
-  }
-}
-
-/** Compare two parsed versions (semver precedence, prerelease-aware): -1/0/1. */
-function compareParsed(a, b) {
-  for (let i = 0; i < 3; i++) {
-    if (a.core[i] !== b.core[i]) return a.core[i] < b.core[i] ? -1 : 1
-  }
-  if (a.pre === null && b.pre === null) return 0
-  if (a.pre === null) return 1 // a release outranks a prerelease of the same core
-  if (b.pre === null) return -1
-  const len = Math.max(a.pre.length, b.pre.length)
-  for (let i = 0; i < len; i++) {
-    const x = a.pre[i]
-    const y = b.pre[i]
-    if (x === undefined) return -1
-    if (y === undefined) return 1
-    const xn = /^\d+$/.test(x)
-    const yn = /^\d+$/.test(y)
-    if (xn && yn) {
-      const dx = Number(x)
-      const dy = Number(y)
-      if (dx !== dy) return dx < dy ? -1 : 1
-    } else if (xn !== yn) {
-      return xn ? -1 : 1 // numeric prerelease ids sort below alphanumeric
-    } else if (x !== y) {
-      return x < y ? -1 : 1
+// Supported DSH product range: read from this package's own `engines.dsh`
+// at startup — that field is the single source of truth, so widening
+// support is a package.json edit with no code change. DSH itself never
+// validates that field, so this host half reports the running version +
+// state to the settings card. `lib/index.js` lives one level below the
+// package root while `src/host/index.js` lives two levels below it, so
+// both layouts are probed and the hit must belong to `dsh-toolfold`.
+// Cached; null when unreadable (the report then stays 'unknown' — fail
+// silent, never false-alarm).
+let cachedEnginesRange
+function ownEnginesRange() {
+  if (cachedEnginesRange !== undefined) return cachedEnginesRange
+  cachedEnginesRange = null
+  try {
+    const here = dirname(fileURLToPath(import.meta.url))
+    for (const rel of ['../package.json', '../../package.json']) {
+      try {
+        const pkg = JSON.parse(readFileSync(resolve(here, rel), 'utf8'))
+        const range = pkg && pkg.name === 'dsh-toolfold' && pkg.engines !== null && typeof pkg.engines === 'object'
+          ? pkg.engines.dsh
+          : undefined
+        if (typeof range === 'string' && range.trim() !== '') {
+          cachedEnginesRange = range.trim()
+          break
+        }
+      } catch {
+        // Try the next layout.
+      }
     }
+  } catch {
+    // No module URL (bundled oddly): stay unknown.
   }
-  return 0
+  return cachedEnginesRange
 }
 
 /**
@@ -142,18 +136,17 @@ function dshVersion() {
   return cachedDshVersion
 }
 
-/** Running DSH vs the supported range: 'ok' | 'old' | 'new' | 'unknown'. */
+/**
+ * Running DSH vs the supported range (see ./version.js): the report the
+ * settings card renders its warning icon from. `range` is the raw
+ * `engines.dsh` string so the card can quote the live requirement instead
+ * of hardcoding it: { version, state: 'ok'|'old'|'new'|'unknown', range }.
+ */
 function dshCompat() {
   const version = dshVersion()
-  if (version === null) return { version: null, state: 'unknown' }
-  const parsed = parseVersion(version)
-  if (parsed === null) return { version, state: 'unknown' }
-  const min = parseVersion(DSH_MIN)
-  const max = parseVersion(DSH_MAX)
-  let state = 'ok'
-  if (compareParsed(parsed, min) < 0) state = 'old'
-  else if (compareParsed(parsed, max) >= 0) state = 'new'
-  return { version, state }
+  const range = ownEnginesRange()
+  if (version === null || range === null) return { version, state: 'unknown', range }
+  return { version, state: compatFor(version, range), range }
 }
 
 /** Write one JSON response. */

@@ -58,7 +58,7 @@ dsh plugin --profile web remove dsh-toolfold
 
 After restart, the interface returns to its original state.
 
-> ⚠️ **Version support**: starting from `0.1.9`, this plugin only supports DSH `>= 0.1.2-rc.1` and `< 0.1.3`. On DSH versions outside this range, the settings card shows a version-mismatch warning and folding may not work correctly.
+> ⚠️ **Version support**: the supported DSH range is whatever `engines.dsh` in `package.json` declares. On DSH versions outside this range, the settings card shows a version-mismatch warning (hover for the live range) and folding may not work correctly.
 
 ---
 

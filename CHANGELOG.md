@@ -2,6 +2,12 @@
 
 所有显著变更将记录于此。版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### 缺陷修复
+- **版本校验不再硬编码**：`package.json engines.dsh` 成为唯一真相源——host 启动时读自家 `package.json` 的声明区间（`lib/` 与 `src/` 两种布局都认，只认 `dsh-toolfold` 包名），以通用匹配器（`||` / `>=` / `<` / `=`，npm semver 的 prerelease 门控）判定运行中 DSH 的 `ok / old / new / unknown`。之前 host 里写死的单区间 `>=0.1.2-rc.1 <0.1.3` 让 `0.1.5-rc.1` 误报感叹号，今后加区间只改 `package.json` 一处。判定逻辑抽为零依赖的 `src/host/version.js`（`parseVersion / compareParsed / parseEnginesRange / satisfiesEngines / compatFor`），配 `tools/version-smoke.mjs` 矩阵测试（含 `0.1.5-rc.1 → ok` 回归项与 `||` 缝隙、`0.1.3-rc.1` 门控项）。
+- **警告文案跟 live 区间走**：host 把区间原文经路由 `dsh.range` 下发，console 警告与设置卡 hover 提示直接引用，client 不再硬编码区间。
+
 ## [0.1.9] - 2026-09-05
 
 > ⚠️ **版本支持**：本节改动将随 `0.1.9` 发布；自 `0.1.9` 起，本插件仅支持 DSH `>= 0.1.2-rc.1` 且 `< 0.1.3`（安装节有同样提示）。

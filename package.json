@@ -40,6 +40,7 @@
     "build": "tsdown",
     "build:watch": "tsdown --watch",
     "test:engine": "node tools/engine-smoke.mjs",
+    "test:version": "node tools/version-smoke.mjs",
     "probe:live": "node tools/live-probe.mjs",
     "install:dsh": "node scripts/install-dsh.cjs",
     "uninstall:dsh": "node scripts/install-dsh.cjs uninstall"

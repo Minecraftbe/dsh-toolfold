@@ -34,19 +34,24 @@ function createSettingsBridge(ctx, store) {
 
   // Version-mismatch report carried by the host route's `dsh` field:
   // 'unknown' until the first host response, then 'ok' | 'old' | 'new'.
+  // `range` is the raw engines.dsh string the verdict was judged against,
+  // so warnings quote the live requirement instead of hardcoding it.
   // A mismatch warns ONCE in the console and flips the card's warning
   // icon state (the icon + hover tooltip render from that state).
   var compatState = 'unknown';
   var compatVersion = null;
+  var compatRange = null;
   var compatWarned = false;
   function setCompat(info) {
     var state = info && (info.state === 'ok' || info.state === 'old' || info.state === 'new') ? info.state : 'unknown';
     var version = info && typeof info.version === 'string' ? info.version : null;
+    var range = info && typeof info.range === 'string' && info.range !== '' ? info.range : null;
     compatState = state;
     compatVersion = version;
+    compatRange = range;
     if (state !== 'ok' && !compatWarned && typeof console !== 'undefined' && typeof console.warn === 'function') {
       compatWarned = true;
-      console.warn('[dsh-toolfold] DSH 版本不匹配（当前 ' + (version === null ? '未知' : version) + '）：本插件支持 DSH >=0.1.2-rc.1 <0.1.3，' + (state === 'old' ? '当前版本过旧，请升级 DSH' : '当前版本过新，请等待插件更新') + '。');
+      console.warn('[dsh-toolfold] DSH 版本不匹配（当前 ' + (version === null ? '未知' : version) + '）：本插件支持 DSH ' + (range === null ? '见 package.json engines.dsh 声明的区间' : range) + '，' + (state === 'old' ? '当前版本过旧，请升级 DSH' : '当前版本过新，请等待插件更新') + '。');
     }
     // Nudge store listeners so the settings card re-renders with the
     // warning icon even when the report arrives after first paint.
@@ -148,8 +153,8 @@ function createSettingsBridge(ctx, store) {
     },
     /** 'dsh' when a host-backed tier is live, 'local' otherwise. */
     status: function () { return scopeReady || routeOk ? 'dsh' : 'local'; },
-    /** Last host-reported DSH compatibility: { state, version }. */
-    compat: function () { return { state: compatState, version: compatVersion }; },
+    /** Last host-reported DSH compatibility: { state, version, range }. */
+    compat: function () { return { state: compatState, version: compatVersion, range: compatRange }; },
     load: routeLoad,
     dispose: function () {
       for (var i = 0; i < disposers.length; i++) disposers[i]();

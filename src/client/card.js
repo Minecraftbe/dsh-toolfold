@@ -31,11 +31,14 @@ function SettingsCard(props) {
   var compat = props.compat();
   var warnEl = null;
   if (compat.state === 'old' || compat.state === 'new') {
+    // Quote the live requirement the host judged against (it rides the
+    // route's `dsh.range`); fall back to a pointer when the report predates it.
+    var rangeText = compat.range || 'package.json engines.dsh 声明的区间';
     warnEl = React.createElement('span', {
       className: 'ccxWarn',
       'data-tip': compat.state === 'old'
-        ? '版本不匹配：当前 DSH 版本落后。\n本插件需要 DSH >= 0.1.2-rc.1，请升级 DSH。'
-        : '版本不匹配：当前 DSH 版本过新。\n本插件尚未适配，请等待插件更新。',
+        ? '版本不匹配：当前 DSH 版本落后。\n本插件需要 DSH ' + rangeText + '，请升级 DSH。'
+        : '版本不匹配：当前 DSH 版本过新。\n本插件支持 DSH ' + rangeText + '，请等待插件更新。',
       'aria-label': '版本不匹配',
       role: 'img'
     }, '\u26A0');

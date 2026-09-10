@@ -200,6 +200,11 @@ check('newer host flips compat to new without a second warning',
 window.fetch = fakeRoute({ version: '0.1.2-rc.1', state: 'ok' });
 await bridge.load();
 check('in-range report clears the mismatch state', bridge.compat().state === 'ok' && consoleWarns.length === 1);
+window.fetch = fakeRoute({ version: '0.1.5-rc.1', state: 'ok', range: '>=0.1.2-rc.1 <0.1.3 || >=0.1.5-rc.1 <0.1.6' });
+await bridge.load();
+check('host range rides through to compat for the card tooltip',
+  bridge.compat().range === '>=0.1.2-rc.1 <0.1.3 || >=0.1.5-rc.1 <0.1.6',
+  JSON.stringify(bridge.compat()));
 // Restore defaults so the timing-sensitive collapse checks below stay valid.
 store.update({ durMs: 240, thinkMode: 'hide' });
 
